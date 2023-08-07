@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Mi Plantilla</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <style>
+        body {
+            background-color: #f2f2f2;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+
+        a {
+            text-decoration: none;
+            color: #007bff;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        form {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <span><a href="{% url 'account:logout' %}">Salir</a></span>
+    <h1>Ingrese el dominio deseado</h1>
+    <form id="miFormulario" method="post">
+        {% csrf_token %}
+        <select class="dominio" name="dominio"></select>
+        <b>Filtro</b>
+        <select class="filter" name="filter" id="filter">
+            <option value="0">Label</option>
+            <option value="1">Uri</option>
+        </select>
+        <br>
+        <br>
+        <select style="margin-top: 20px;" class="subdominios" name="subdominios" multiple="multiple">
+            <option></option>
+        </select>
+        <input type="hidden" name="contador" id="contador" value="0">
+        <input type="hidden" name="valores_seleccionados" id="valores_seleccionados">
+        <div>
+            <input style="margin-top: 20px;" type="button" id="masSubdominios" value="Obtener más subdominios">
+            <input type="submit" id="enviarTodo" value="Enviar">
+        </div>
+    </form>
+    <p id="resultado"></p>
+
+
+    <script>
+        $(document).ready(function () {
+            $('.filter').select2({
+                width: '10%',
+            });
+            var valoresSeleccionados = [];
+            
+            $('.dominio').select2({
+                closeOnSelect: true,
+                placeholder: 'Ingrese un dominio',
+                width: "80%",
+                sorter: data => data.sort((a, b) => a.text.localeCompare(b.text)),
+                ajax: {
+                    url: "{% url 'domain:domains' %}",
+                    delay: 1000,
+                    data: function (params) {
+                        return {
+                            'term': params.term
+                        };
+                    },
+                    processResults: function (data) {
+                        var options = [];
+                        debugger
+                        $.each(data.results, function (index, item) {
+                            options.push({
+                                id: item.id,
+                                text: item.text
+                            });
+                        });
+                        return {
+                            results: options
+                        };
+                    }
+
+                }
+            });
+  
+            $('#masSubdominios').click(function (event) {
+                event.preventDefault();
+                var select = $('.subdominios');
+                var nuevosValoresSeleccionados = select.val();
+                valoresSeleccionados = valoresSeleccionados.concat(nuevosValoresSeleccionados);
+                $('#valores_seleccionados').val(JSON.stringify(valoresSeleccionados));
+                
+                $.ajax({
+                    url: '{% url "domain:subdomains" %}',
+                    data: function (params) {
+                        return {
+                            'term': params.term
+                        };
+                    },                   
+                    success: function (response) {
+                        debugger
+                        var select = $('.subdominios');
+                        select.empty();
+                        var data = JSON.parse(response);
+
+                        // Iterar sobre el objeto data
+                        $.each(data, function (index, value) {
+                            select.append($('<option></option>').val(value).text(value));
+                        });
+                        // Establecer los valores seleccionados en función de los valores devueltos por el view
+                        select.val(data);
+                        select.trigger('change');
+                    }
+                });
+            });
+
+            $('#miFormulario').submit(function (event) {
+                event.preventDefault();  // Evitar el envío normal del formulario
+                var select = $('.subdominios');
+                var nuevosValoresSeleccionados = select.val();
+                // Agregar los nuevos valores seleccionados al array
+                valoresSeleccionados = valoresSeleccionados.concat(nuevosValoresSeleccionados);
+                // Almacenar los valores seleccionados en el campo oculto
+                $('#valores_seleccionados').val(JSON.stringify(valoresSeleccionados));
+                $(this).unbind('submit').submit();
+            });
+
+            $('.subdominios').select2({
+                closeOnSelect: false,
+                placeholder: 'Seleccione los subdominios',
+                width: "80%",
+                sorter: data => data.sort((a, b) => a.text.localeCompare(b.text)),
+            });
+
+            $('#masSubdominios').click(function () {
+                var contador = $('#contador');
+                contador.val(parseInt(contador.val()) + 1);
+            });
+        });
+
+    </script>
+</body>
+
+</html>
