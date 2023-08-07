@@ -20,7 +20,6 @@ def get_results(query):
     results = sparql.query().convert()
     return results
 
-
 @csrf_exempt
 @login_required(login_url='login')
 @allowed_users(allowed_roles=['admin'])
@@ -67,7 +66,6 @@ def get_subdomains(request):
 
     return JsonResponse({'error': 'No se pudo procesar la solicitud'})
 
-
 def get_search_concepts(request):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         concepto = request.GET.get('term')
@@ -101,7 +99,6 @@ def get_search_concepts(request):
                     GROUP BY ?r ?label HAVING (COUNT(*) > 2)
                     ORDER BY DESC(COUNT(?r))
                     """ % (concepto)
-
             resultados = get_results(query)
             opciones = [
                 {"id": item["r"]["value"], "text": item["r"]["value"]}
@@ -134,3 +131,20 @@ def get_reource_query(resource, level):
 
     resultados = get_results(query)
     return resultados["results"]["bindings"]
+
+def modify_configurations(request):
+    with open("global_config/filters.txt", 'r') as file:
+        data = file.read()
+
+    data_list = data.split(';')
+    data_list.pop()
+    return render(request, 'configurations.html', {'data_list': data_list})
+
+def add_filter(request, filter_value):
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        if filter_value:
+            with open("global_config/filters.txt", 'a') as filters_file:
+                filters_file.write(filter_value)
+                filters_file.write(";")
+            return JsonResponse({'message': 'Filtro agregado exitosamente.'})
+    return JsonResponse({'error': 'Error al agregar el filtro.'}, status=400)
