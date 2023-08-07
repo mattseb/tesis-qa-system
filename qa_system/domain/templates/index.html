@@ -36,8 +36,8 @@
         <select class="dominio" name="dominio"></select>
         <b>Filtro</b>
         <select class="filter" name="filter" id="filter">
-            <option value="0">Label</option>
-            <option value="1">Uri</option>
+            <option value="0">Label (_)</option>
+            <option value="1">Uri ( )</option>
         </select>
         <br>
         <br>
@@ -71,8 +71,10 @@
                     url: "{% url 'domain:domains' %}",
                     delay: 1000,
                     data: function (params) {
+                        debugger
                         return {
-                            'term': params.term
+                            'term': params.term,
+                            'tipo': $("#filter").val(),
                         };
                     },
                     processResults: function (data) {

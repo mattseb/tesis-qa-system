@@ -71,20 +71,36 @@ def get_subdomains(request):
 def get_search_concepts(request):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         concepto = request.GET.get('term')
+        tipo = request.GET.get('tipo')
         if concepto is not None and concepto != '':
-            query = """
-                SELECT DISTINCT ?r
-                WHERE
-                {
-                    ?r rdf:type skos:Concept; rdfs:label ?label.
-                    ?c skos:broader ?r.
-                    FILTER CONTAINS(?label, "%s").
-                    FILTER (LANG(?label) = "en").
-                    FILTER (!regex(?r, "lists")).
+            if tipo == '0':
+                query = """
+                SELECT DISTINCT ?r (COUNT(?concepts) AS ?conceptsCount)
+                WHERE {
+                ?r rdf:type skos:Concept; rdfs:label ?label.
+                ?r ^skos:broader{1} ?concepts .
+                FILTER(CONTAINS(str(?r), "%s"))
+                FILTER(LANG(?label) = "en")
+                FILTER(!CONTAINS(str(?r), "LISTS"))
                 }
-                GROUP BY ?r ?label HAVING (COUNT(*) > 2)
-                ORDER BY DESC(COUNT(?r))
+                GROUP BY ?r
+                HAVING(COUNT(?concepts) > 5)
+                ORDER BY DESC(?conceptsCount)
                 """ % (concepto)
+            elif tipo == '1':    
+                query = """
+                    SELECT DISTINCT ?r
+                    WHERE
+                    {
+                        ?r rdf:type skos:Concept; rdfs:label ?label.
+                        ?c skos:broader ?r.
+                        FILTER CONTAINS(?label, "%s").
+                        FILTER (LANG(?label) = "en").
+                        FILTER (!regex(?r, "lists")).
+                    }
+                    GROUP BY ?r ?label HAVING (COUNT(*) > 2)
+                    ORDER BY DESC(COUNT(?r))
+                    """ % (concepto)
 
             resultados = get_results(query)
             opciones = [
