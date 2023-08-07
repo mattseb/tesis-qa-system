@@ -59,6 +59,7 @@
             $('.filter').select2({
                 width: '10%',
             });
+            
             var valoresSeleccionados = [];
             
             $('.dominio').select2({
@@ -76,7 +77,6 @@
                     },
                     processResults: function (data) {
                         var options = [];
-                        debugger
                         $.each(data.results, function (index, item) {
                             options.push({
                                 id: item.id,
@@ -90,27 +90,54 @@
 
                 }
             });
-  
-            $('#masSubdominios').click(function (event) {
-                event.preventDefault();
-                var select = $('.subdominios');
-                var nuevosValoresSeleccionados = select.val();
-                valoresSeleccionados = valoresSeleccionados.concat(nuevosValoresSeleccionados);
-                $('#valores_seleccionados').val(JSON.stringify(valoresSeleccionados));
-                
+
+            $('.dominio').on('change', function (e) {
+                var selectedValue = $(this).val();
+                console.log("Valor seleccionado:", selectedValue); // Imprimir el valor seleccionado
+                var params = {
+                    selectedValue: selectedValue,
+                };
                 $.ajax({
                     url: '{% url "domain:subdomains" %}',
-                    data: function (params) {
-                        return {
-                            'term': params.term
-                        };
-                    },                   
+                    data: params,       
                     success: function (response) {
                         debugger
                         var select = $('.subdominios');
                         select.empty();
                         var data = JSON.parse(response);
 
+                        // Iterar sobre el objeto data
+                        $.each(data, function (index, value) {
+                            select.append($('<option></option>').val(value).text(value));
+                        });
+                        // Establecer los valores seleccionados en función de los valores devueltos por el view
+                        select.val(data);
+                        select.trigger('change');
+                    }
+                });
+            
+            });
+            
+            $('#masSubdominios').click(function (event) {
+                event.preventDefault();
+                var select = $('.subdominios');
+                var nuevosValoresSeleccionados = select.val();
+                valoresSeleccionados = valoresSeleccionados.concat(nuevosValoresSeleccionados);
+                $('#valores_seleccionados').val(JSON.stringify(valoresSeleccionados));
+                var selectedValue = $(".subdominios").val();
+                debugger
+                console.log("Valor seleccionado:", selectedValue); // Imprimir el valor seleccionado
+                var params = {
+                    selectedValue: selectedValue,
+                    level: "1",
+                };
+                $.ajax({
+                    url: '{% url "domain:subdomains" %}',
+                    data: params,                 
+                    success: function (response) {
+                        var select = $('.subdominios');
+                        select.empty();
+                        var data = JSON.parse(response);
                         // Iterar sobre el objeto data
                         $.each(data, function (index, value) {
                             select.append($('<option></option>').val(value).text(value));

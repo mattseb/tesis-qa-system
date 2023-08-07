@@ -20,26 +20,6 @@ def get_results(query):
     results = sparql.query().convert()
     return results
 
-def get_reource_query(resource, level):
-    resource = quote(resource)
-    query = """
-    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-    PREFIX dct: <http://purl.org/dc/terms/>
-
-    select distinct ?level ?r ?c1
-        {
-            {VALUES (?r ?level) {(dbc:%s + %s)}
-                ?r ^skos:broader{1} ?c1.
-
-            FILTER (!regex(?c1, "lists"))
-        }
-    
-    }    
-    """ %(resource,str(level))
-
-    resultados = get_results(query)
-    return resultados["results"]["bindings"]
 
 @csrf_exempt
 @login_required(login_url='login')
@@ -50,19 +30,25 @@ def index(request):
         print(valoresSeleccionados)
     return render(request, 'index.html')
 
+def loginPage(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
 def get_subdomains(request):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         print(request.GET)
-        concepto = request.GET.get('term')
-    if request.method == 'POST':
+        concepto = request.GET.get('selectedValue')
+        nivel = request.GET.get('level')
         resultados = []
-        nivel = request.POST.get('contador')
+        nivel = request.GET.get('level') if request.GET.get('level') != None else '0' 
         if nivel == '0':
-            dominiosSeleccionados = request.POST.get('dominio')
+            dominiosSeleccionados = concepto.split("Category:", 1)[1]
             resultado = get_reource_query(dominiosSeleccionados, nivel)
             resultados.append(resultado)
         else:
             dominiosSeleccionados = request.POST.getlist('subdominios')
+            dominiosSeleccionados = request.GET.getlist('selectedValue[]')
             for dominio in dominiosSeleccionados:
                 dominio = dominio.split(":")[-1]
                 resultado = get_reource_query(dominio, nivel)
@@ -81,10 +67,6 @@ def get_subdomains(request):
 
     return JsonResponse({'error': 'No se pudo procesar la solicitud'})
 
-def loginPage(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
 
 def get_search_concepts(request):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -115,30 +97,24 @@ def get_search_concepts(request):
     else:
         return JsonResponse({"error": "Invalid request. Only AJAX requests are allowed."}, status=400)
 
-def get_reource_query(request):
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        concepto = request.GET.get('term')
-        level = request.GET.get('term')
-        if concepto is not None and concepto != '':
-            query = """
-                PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-                PREFIX dct: <http://purl.org/dc/terms/>
-                select distinct ?level ?r ?c1
-                    {
-                        {VALUES (?level) {(%s)}
-                        <%s> ^skos:broader{1} ?c1.
-                        FILTER (!regex(?c1, "lists"))
-                    }
-                }    
-            """ %(concepto, level)
-            resultados = get_results(query)
-            opciones = [
-                {"id": item["r"]["value"], "text": item["r"]["value"]}
-                for item in resultados["results"]["bindings"]
-            ]
-            return JsonResponse({"results": opciones}, safe=False)
-        else:
-            return JsonResponse({"results": []}, safe=False)
-    else:
-        return JsonResponse({"error": "Invalid request. Only AJAX requests are allowed."}, status=400)
+def get_reource_query(resource, level):
+    if "," in resource:
+        resource = resource.replace(",",r"\,")
+    query = """
+    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    PREFIX dct: <http://purl.org/dc/terms/>
+
+    select distinct ?level ?r ?c1
+        {
+            {VALUES (?r ?level) {(dbc:%s + %s)}
+                ?r ^skos:broader{1} ?c1.
+
+            FILTER (!regex(?c1, "lists"))
+        }
+    
+    }    
+    """ %(resource,str(level))
+
+    resultados = get_results(query)
+    return resultados["results"]["bindings"]
