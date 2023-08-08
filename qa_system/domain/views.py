@@ -140,11 +140,20 @@ def modify_configurations(request):
     data_list.pop()
     return render(request, 'configurations.html', {'data_list': data_list})
 
-def add_filter(request, filter_value):
+def add_filter(request, filter_value, filter_action):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         if filter_value:
-            with open("global_config/filters.txt", 'a') as filters_file:
-                filters_file.write(filter_value)
-                filters_file.write(";")
-            return JsonResponse({'message': 'Filtro agregado exitosamente.'})
+            if filter_action == 'add':
+                with open("global_config/filters.txt", 'a') as filters_file:
+                    filters_file.write(filter_value)
+                    filters_file.write(";")
+                return JsonResponse({'message': 'Filtro agregado exitosamente.'})
+            elif filter_action == 'delete':
+                filter_value = filter_value + ";"
+                with open("global_config/filters.txt", 'r') as filters_file:
+                    data = filters_file.read()
+                data = data.replace(filter_value, '')
+                with open("global_config/filters.txt", 'w') as filters_file:
+                    filters_file.write(data)
+                return JsonResponse({'message': 'Filtro eliminado exitosamente.'})
     return JsonResponse({'error': 'Error al agregar el filtro.'}, status=400)
