@@ -57,7 +57,6 @@ Filtros
   function addFilter() {
     newFilter = $("#newFilterInput").val();
     data = { filter: newFilter };
-    debugger
     $.ajax({
       url: "{% url 'domain:add_filter' 'newFilter' 'add' %}".replace('newFilter', newFilter),
       data: data,
@@ -69,7 +68,6 @@ Filtros
 
   function deleteFilter(deleteLi) {
     deleteItem = deleteLi.innerText.split("\n")[0]
-    debugger  
     $.ajax({
       url: "{% url 'domain:add_filter' 'deleteItem' 'delete' %}".replace('deleteItem', deleteItem),
       success: function (response) {

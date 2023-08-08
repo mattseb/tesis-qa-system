@@ -49,7 +49,6 @@ Crear Corpus
                 url: "{% url 'domain:domains' %}",
                 delay: 1000,
                 data: function (params) {
-                    debugger
                     return {
                         'term': params.term,
                         'tipo': $("#filter").val(),
@@ -81,7 +80,6 @@ Crear Corpus
                 url: '{% url "domain:subdomains" %}',
                 data: params,       
                 success: function (response) {
-                    debugger
                     var select = $('.subdominios');
                     select.empty();
                     var data = JSON.parse(response);
@@ -105,7 +103,6 @@ Crear Corpus
             valoresSeleccionados = valoresSeleccionados.concat(nuevosValoresSeleccionados);
             $('#valores_seleccionados').val(JSON.stringify(valoresSeleccionados));
             var selectedValue = $(".subdominios").val();
-            debugger
             console.log("Valor seleccionado:", selectedValue); // Imprimir el valor seleccionado
             var params = {
                 selectedValue: selectedValue,
@@ -133,7 +130,6 @@ Crear Corpus
             event.preventDefault();  // Evitar el envío normal del formulario
             var select = $('.subdominios');
             var nuevosValoresSeleccionados = select.val();
-            // Agregar los nuevos valores seleccionados al array
             valoresSeleccionados = valoresSeleccionados.concat(nuevosValoresSeleccionados);
             // Almacenar los valores seleccionados en el campo oculto
             $('#valores_seleccionados').val(JSON.stringify(valoresSeleccionados));

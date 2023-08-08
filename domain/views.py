@@ -26,7 +26,13 @@ def get_results(query):
 def index(request):
     if request.method == 'POST':
         valoresSeleccionados = request.POST.get('valores_seleccionados')
-        print(valoresSeleccionados)
+        valoresSeleccionados = json.loads(valoresSeleccionados)
+        lista = []
+        for valor in valoresSeleccionados:
+            lista += get_links(valor, 1)
+            print(valor)
+        print(len(lista))
+        return render(request, 'content.html', {'contador': len(lista)})
     return render(request, 'index.html')
 
 def loginPage(request):
@@ -36,7 +42,6 @@ def loginPage(request):
 
 def get_subdomains(request):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        print(request.GET)
         concepto = request.GET.get('selectedValue')
         nivel = request.GET.get('level')
         resultados = []
@@ -109,6 +114,7 @@ def get_search_concepts(request):
                     ORDER BY DESC(COUNT(?r))
                     """ % (concepto, filters)
             resultados = get_results(query)
+            print(query)
             opciones = [
                 {"id": item["r"]["value"], "text": item["r"]["value"]}
                 for item in resultados["results"]["bindings"]
@@ -122,6 +128,15 @@ def get_search_concepts(request):
 def get_reource_query(resource, level):
     if "," in resource:
         resource = resource.replace(",",r"\,")
+
+    with open('global_config/filters.txt', 'r') as filters_file:
+        data = filters_file.readline()
+        data = data.split(";")
+        data.pop()
+
+        filters = ""
+        for filter_item in data:
+            filters += f"FILTER(!CONTAINS(str(?label), '{filter_item.strip()}'))\n"
     query = """
     PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -131,12 +146,12 @@ def get_reource_query(resource, level):
         {
             {VALUES (?r ?level) {(dbc:%s + %s)}
                 ?r ^skos:broader{1} ?c1.
-
-            FILTER (!regex(?c1, "lists"))
+            FILTER(LANG(?label) = "en")
+            %s           
         }
     
     }    
-    """ %(resource,str(level))
+    """ %(resource,str(level), filters)
 
     resultados = get_results(query)
     return resultados["results"]["bindings"]
@@ -166,3 +181,28 @@ def add_filter(request, filter_value, filter_action):
                     filters_file.write(data)
                 return JsonResponse({'message': 'Filtro eliminado exitosamente.'})
     return JsonResponse({'error': 'Error al agregar el filtro.'}, status=400)
+
+
+# PRUEBAAAAA
+
+def get_links(resource, level):
+    resource = quote(resource)
+    query = """
+    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    PREFIX dct: <http://purl.org/dc/terms/>
+
+    select distinct ?w as ?wikipedia_resource
+    where
+    {
+        {VALUES (?r) {(dbc:%s)}
+   
+        ?subject dcterms:subject ?r.
+        ?subject foaf:isPrimaryTopicOf ?w.
+        ?subject dbo:wikiPageID ?id_wiki.
+        }
+    }   
+    """ %(resource)
+
+    resultados = get_results(query)
+    return resultados["results"]["bindings"]
