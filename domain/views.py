@@ -21,8 +21,8 @@ def get_results(query):
     return results
 
 @csrf_exempt
-@login_required(login_url='login')
-@allowed_users(allowed_roles=['admin'])
+# @login_required(login_url='login')
+# @allowed_users(allowed_roles=['admin'])
 def index(request):
     if request.method == 'POST':
         valoresSeleccionados = request.POST.get('valores_seleccionados')
