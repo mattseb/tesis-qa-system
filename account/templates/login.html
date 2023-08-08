@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="{% static 'styles/register.css' %}">
+</head>
+
+<body>
+    <div class="session">
+        <div class="left">
+        </div>
+        <form method="POST" action="">
+            {% csrf_token %}
+            <label for="">Usuario</label>
+            <input name="username" type="text">
+
+            <label for=''>Contraseña</label>
+            <input name='password' type="password">
+
+            <button type="submit" name="create_user">Iniciar sesión</button>
+            {% for message in messages %}
+            <p>{{ message }}</p>
+            {% endfor %}
+        </form>
+    </div>
+</body>
+
+</html>

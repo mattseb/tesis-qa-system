@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}
+Filtros
+{% endblock title %}
+{% block content %}
+{% block js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+{% endblock js %}
+<h1>Configuraciones Globales</h1>
+<div class="container-filters">
+  <h2>Filtros</h2>
+  <ul class="list-group">
+    {% for filter in data_list %}
+    <li id="filterItem{{ filter }}" class="list-group-item d-flex justify-content-between align-items-center">
+      {{filter}}
+      <span class="badge badge-primary badge-pill">
+        <a href="#" onclick=deleteFilter(filterItem{{ filter }})>Eliminar</a>
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+  <br>
+  <div class="input-group mb-3">
+    <input type="text" class="form-control" id="newFilterInput" placeholder="Ingresar filtro"
+      aria-describedby="basic-addon2">
+    <div class="input-group-append">
+      <button class="btn btn-outline-secondary" id="addFilterButton" type="button" onclick=addFilter()>Agregar</button>
+    </div>
+  </div>
+</div>
+{% endblock content %}
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const addFilterButton = document.getElementById('addFilterButton');
+    const newFilterInput = document.getElementById('newFilterInput');
+    const filterList = document.querySelector('.list-group');
+
+    addFilterButton.addEventListener('click', function () {
+      const newFilterValue = newFilterInput.value.trim();
+      if (newFilterValue) {
+        // Agregar el nuevo filtro a la lista en el frontend
+        const newFilterItem = document.createElement('li');
+        newFilterItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+        newFilterItem.innerHTML = `
+        ${newFilterValue}
+        <span class="badge badge-primary badge-pill">
+          <a href="#">Eliminar</a>
+        </span>
+      `;
+        filterList.appendChild(newFilterItem);
+        // Limpiar el campo de entrada
+        newFilterInput.value = '';
+      }
+    });
+  });
+  function addFilter() {
+    newFilter = $("#newFilterInput").val();
+    data = { filter: newFilter };
+    debugger
+    $.ajax({
+      url: "{% url 'domain:add_filter' 'newFilter' 'add' %}".replace('newFilter', newFilter),
+      data: data,
+      success: function (response) {
+        console.log(response)
+      }
+    })
+  }
+
+  function deleteFilter(deleteLi) {
+    deleteItem = deleteLi.innerText.split("\n")[0]
+    debugger  
+    $.ajax({
+      url: "{% url 'domain:add_filter' 'deleteItem' 'delete' %}".replace('deleteItem', deleteItem),
+      success: function (response) {
+        $(deleteLi).remove();
+      }
+    })
+  }
+</script>
+{% endblock scripts %}

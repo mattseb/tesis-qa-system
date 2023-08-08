@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrar</title>
+  <link rel="stylesheet" href="{% static 'styles/register.css' %}">
+</head>
+
+<body>
+  <div class="session">
+    <div class="left">  
+    </div>
+    <form method="POST" action="">
+      {% csrf_token %}
+      <label for="">{{ form.username.label }}</label>
+      {{ form.username }}
+
+      <label for="">{{ form.email.label }}</label>
+      {{ form.email }}
+
+      <label for="">{{ form.password1.label }}</label>
+      {{ form.password1 }}
+
+      <label for="">{{ form.password2.label }}</label>
+      {{ form.password2 }}
+      <button type="submit" name="create_user">Crear Usuario</button>
+      {{ form.errors }}
+    </form>
+  </div>
+</body>
+
+</html>
