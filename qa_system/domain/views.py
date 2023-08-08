@@ -70,6 +70,15 @@ def get_search_concepts(request):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         concepto = request.GET.get('term')
         tipo = request.GET.get('tipo')
+        with open('global_config/filters.txt', 'r') as filters_file:
+            data = filters_file.readline()
+        data = data.split(";")
+        data.pop()
+
+        filters = ""
+        for filter_item in data:
+            filters += f"FILTER(!CONTAINS(str(?label), '{filter_item.strip()}'))\n"
+
         if concepto is not None and concepto != '':
             if tipo == '0':
                 query = """
@@ -79,12 +88,12 @@ def get_search_concepts(request):
                 ?r ^skos:broader{1} ?concepts .
                 FILTER(CONTAINS(str(?r), "%s"))
                 FILTER(LANG(?label) = "en")
-                FILTER(!CONTAINS(str(?r), "LISTS"))
+                %s
                 }
                 GROUP BY ?r
                 HAVING(COUNT(?concepts) > 5)
                 ORDER BY DESC(?conceptsCount)
-                """ % (concepto)
+                """ % (concepto, filters)
             elif tipo == '1':    
                 query = """
                     SELECT DISTINCT ?r
@@ -94,11 +103,11 @@ def get_search_concepts(request):
                         ?c skos:broader ?r.
                         FILTER CONTAINS(?label, "%s").
                         FILTER (LANG(?label) = "en").
-                        FILTER (!regex(?r, "lists")).
+                        %s
                     }
                     GROUP BY ?r ?label HAVING (COUNT(*) > 2)
                     ORDER BY DESC(COUNT(?r))
-                    """ % (concepto)
+                    """ % (concepto, filters)
             resultados = get_results(query)
             opciones = [
                 {"id": item["r"]["value"], "text": item["r"]["value"]}
