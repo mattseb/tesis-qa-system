@@ -146,6 +146,7 @@ def get_reource_query(resource, level):
         {
             {VALUES (?r ?level) {(dbc:%s + %s)}
                 ?r ^skos:broader{1} ?c1.
+                ?c1 rdfs:label ?label.
             FILTER(LANG(?label) = "en")
             %s           
         }
