@@ -10,6 +10,8 @@ from .decorators import allowed_users
 from django.contrib.auth.decorators import login_required
 import xml.etree.ElementTree as ET
 from django.http import JsonResponse
+import wikipedia
+import pandas as pd
 
 endPoint = "https://dbpedia.org/sparql"
 sparql = SPARQLWrapper(endPoint)
@@ -25,51 +27,35 @@ def get_results(query):
 @allowed_users(allowed_roles=['admin'])
 def index(request):
     if request.method == 'POST':
+        sections = []
         valoresSeleccionados = request.POST.get('valores_seleccionados')
         valoresSeleccionados = json.loads(valoresSeleccionados)
         lista = []
         for valor in valoresSeleccionados:
-            lista += get_links(valor, 1)
+            lista += get_links(valor)
             print(valor)
-        print(len(lista))
+        print("ELelemtos ", len(lista))
+        for item in lista:
+            sections += get_page_sections(item['id_wiki']['value'])
+        df = pd.DataFrame(sections, columns=['Seccion', 'Subseccion', 'Contenido'])
+        
+        new_rows = []
+
+        for index, row in df.iterrows():
+            content = row['Contenido']
+            section = row['Seccion']
+            subsection = row['Subseccion']
+            
+            secciones = subdividir_texto(content)
+            
+            for seccion in secciones:
+                new_rows.append((section, subsection, seccion))
+
+        df_new = pd.DataFrame(new_rows, columns=['Seccion', 'Subseccion', 'Contenido'])
+        df_new.to_csv("dominio3.csv", index=False)
+
         return render(request, 'content.html', {'contador': len(lista)})
     return render(request, 'index.html')
-
-def loginPage(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-
-def get_subdomains(request):
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        concepto = request.GET.get('selectedValue')
-        nivel = request.GET.get('level')
-        resultados = []
-        nivel = request.GET.get('level') if request.GET.get('level') != None else '0' 
-        if nivel == '0':
-            dominiosSeleccionados = concepto.split("Category:", 1)[1]
-            resultado = get_reource_query(dominiosSeleccionados, nivel)
-            resultados.append(resultado)
-        else:
-            dominiosSeleccionados = request.POST.getlist('subdominios')
-            dominiosSeleccionados = request.GET.getlist('selectedValue[]')
-            for dominio in dominiosSeleccionados:
-                dominio = dominio.split(":")[-1]
-                resultado = get_reource_query(dominio, nivel)
-                resultados.append(resultado)
-
-        if resultados:
-            lista = []
-
-            for resultado in resultados:
-                for item in resultado:
-                    url = item["c1"]["value"]
-                    clave = url.split(":")[-1]
-                    lista.append(clave)
-            json_data = json.dumps(lista)
-            return JsonResponse(json_data, safe=False)
-
-    return JsonResponse({'error': 'No se pudo procesar la solicitud'})
 
 def get_search_concepts(request):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -113,8 +99,8 @@ def get_search_concepts(request):
                     GROUP BY ?r ?label HAVING (COUNT(*) > 2)
                     ORDER BY DESC(COUNT(?r))
                     """ % (concepto, filters)
-            resultados = get_results(query)
             print(query)
+            resultados = get_results(query)
             opciones = [
                 {"id": item["r"]["value"], "text": item["r"]["value"]}
                 for item in resultados["results"]["bindings"]
@@ -124,6 +110,37 @@ def get_search_concepts(request):
             return JsonResponse({"results": []}, safe=False)
     else:
         return JsonResponse({"error": "Invalid request. Only AJAX requests are allowed."}, status=400)
+
+def get_subdomains(request):
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        concepto = request.GET.get('selectedValue')
+        nivel = request.GET.get('level')
+        resultados = []
+        nivel = request.GET.get('level') if request.GET.get('level') != None else '0' 
+        if nivel == '0':
+            dominiosSeleccionados = concepto.split("Category:", 1)[1]
+            resultado = get_reource_query(dominiosSeleccionados, nivel)
+            resultados.append(resultado)
+        else:
+            dominiosSeleccionados = request.POST.getlist('subdominios')
+            dominiosSeleccionados = request.GET.getlist('selectedValue[]')
+            for dominio in dominiosSeleccionados:
+                dominio = dominio.split(":")[-1]
+                resultado = get_reource_query(dominio, nivel)
+                resultados.append(resultado)
+
+        if resultados:
+            lista = []
+
+            for resultado in resultados:
+                for item in resultado:
+                    url = item["c1"]["value"]
+                    clave = url.split(":")[-1]
+                    lista.append(clave)
+            json_data = json.dumps(lista)
+            return JsonResponse(json_data, safe=False)
+
+    return JsonResponse({'error': 'No se pudo procesar la solicitud'})
 
 def get_reource_query(resource, level):
     if "," in resource:
@@ -184,26 +201,75 @@ def add_filter(request, filter_value, filter_action):
     return JsonResponse({'error': 'Error al agregar el filtro.'}, status=400)
 
 
-# PRUEBAAAAA
 
-def get_links(resource, level):
+def get_links(resource):
     resource = quote(resource)
     query = """
     PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     PREFIX dct: <http://purl.org/dc/terms/>
+    PREFIX dbo: <http://dbpedia.org/ontology/>
 
-    select distinct ?w as ?wikipedia_resource
-    where
+    SELECT DISTINCT ?wikipedia_resource ?id_wiki
+    WHERE
     {
         {VALUES (?r) {(dbc:%s)}
    
         ?subject dcterms:subject ?r.
-        ?subject foaf:isPrimaryTopicOf ?w.
+        ?subject foaf:isPrimaryTopicOf ?wikipedia_resource.
         ?subject dbo:wikiPageID ?id_wiki.
         }
     }   
-    """ %(resource)
+    """ % (resource)
 
     resultados = get_results(query)
     return resultados["results"]["bindings"]
+
+
+# PRUEBAAAAA
+def get_page_sections(page_id, language='en'):
+    print(page_id)
+    try:
+        title = wikipedia.page(pageid=page_id, auto_suggest=False).title
+    except:
+        sections = []
+        return sections
+    wikipedia.set_lang(language)
+    page = wikipedia.page(title, auto_suggest=False)
+    content = page.content.split('\n')
+
+    sections = []
+    current_section = None
+    exclude_sections = ["== See also ==", "== References ==", "== External links =="]
+    for line in content:
+        if(line):
+            line = line.strip()
+        if line.startswith("===") and line.endswith("===") and line not in exclude_sections:
+            sub_section = line.strip("=")
+            sections.append((current_section, sub_section, ""))
+        elif line.startswith("==") and line.endswith("==") and line not in exclude_sections:
+            section = line.strip("=")
+            current_section = section
+        else:
+            if current_section and line not in exclude_sections:
+                if sections:
+                    sections[-1] = (sections[-1][0], sections[-1][1], sections[-1][2] + " " + line)
+                else:
+                    sections.append((current_section, None, line))
+    return sections
+
+def subdividir_texto(texto, max_palabras=100):
+    secciones = []
+    palabras = texto.split()
+    inicio = 0
+
+    while inicio < len(palabras):
+        fin = inicio + max_palabras
+        while fin > inicio and fin < len(palabras) and palabras[fin][-1] != '.':
+            fin -= 1
+
+        seccion = ' '.join(palabras[inicio:fin + 1])
+        secciones.append(seccion)
+        inicio = fin + 1
+
+    return secciones
