@@ -6,34 +6,36 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from urllib.parse import quote
 from django.contrib.auth.decorators import login_required
-from .decorators import allowed_users
-from django.contrib.auth.decorators import login_required
 import xml.etree.ElementTree as ET
 from django.http import JsonResponse
 import wikipedia
 import pandas as pd
+from django.http import JsonResponse
 
+
+# Endpoint to make the query
 endPoint = "https://dbpedia.org/sparql"
 sparql = SPARQLWrapper(endPoint)
 
+# Query endpoint and parse as JSON
 def get_results(query):
-    sparql.setReturnFormat(JSON)
     sparql.setQuery(query)
+    sparql.setReturnFormat(JSON)
     results = sparql.query().convert()
+
+    print((results['results']['bindings']))
+    print(len(results['results']['bindings']))
     return results
 
-@csrf_exempt
-@login_required(login_url='login')
-@allowed_users(allowed_roles=['admin'])
 def index(request):
+    # Get all the subdomains
     if request.method == 'POST':
         sections = []
         valoresSeleccionados = request.POST.get('valores_seleccionados')
         valoresSeleccionados = json.loads(valoresSeleccionados)
         lista = []
-        for valor in valoresSeleccionados:
-            lista += get_links(valor)
-            print(valor)
+
+        lista += get_links(valoresSeleccionados)
         print("ELelemtos ", len(lista))
         for item in lista:
             sections += get_page_sections(item['id_wiki']['value'])
@@ -57,6 +59,7 @@ def index(request):
         return render(request, 'content.html', {'contador': len(lista)})
     return render(request, 'index.html')
 
+# Obtain the primary search concepts
 def get_search_concepts(request):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         concepto = request.GET.get('term')
@@ -65,10 +68,6 @@ def get_search_concepts(request):
             data = filters_file.readline()
         data = data.split(";")
         data.pop()
-
-        filters = ""
-        for filter_item in data:
-            filters += f"FILTER(!CONTAINS(str(?label), '{filter_item.strip()}'))\n"
 
         if concepto is not None and concepto != '':
             if tipo == '0':
@@ -79,13 +78,15 @@ def get_search_concepts(request):
                 ?r ^skos:broader{1} ?concepts .
                 FILTER(CONTAINS(str(?r), "%s"))
                 FILTER(LANG(?label) = "en")
-                %s
                 }
                 GROUP BY ?r
                 HAVING(COUNT(?concepts) > 5)
                 ORDER BY DESC(?conceptsCount)
-                """ % (concepto, filters)
-            elif tipo == '1':    
+                """ % (concepto)
+            elif tipo == '1':
+                filters = ""
+                for filter_item in data:
+                    filters += f"FILTER(!CONTAINS(str(?label), '{filter_item.strip()}'))\n"
                 query = """
                     SELECT DISTINCT ?r
                     WHERE
@@ -99,7 +100,6 @@ def get_search_concepts(request):
                     GROUP BY ?r ?label HAVING (COUNT(*) > 2)
                     ORDER BY DESC(COUNT(?r))
                     """ % (concepto, filters)
-            print(query)
             resultados = get_results(query)
             opciones = [
                 {"id": item["r"]["value"], "text": item["r"]["value"]}
@@ -201,9 +201,10 @@ def add_filter(request, filter_value, filter_action):
     return JsonResponse({'error': 'Error al agregar el filtro.'}, status=400)
 
 
-
-def get_links(resource):
-    resource = quote(resource)
+def get_links(resources):
+    resources = [quote(resource) for resource in resources]
+    values_clause = " ".join(["(dbc:%s)" % resource for resource in resources])
+    # resource = quote(resource)
     query = """
     PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -211,22 +212,20 @@ def get_links(resource):
     PREFIX dbo: <http://dbpedia.org/ontology/>
 
     SELECT DISTINCT ?wikipedia_resource ?id_wiki
-    WHERE
-    {
-        {VALUES (?r) {(dbc:%s)}
+    WHERE {
+        VALUES (?r) {%s}
    
         ?subject dcterms:subject ?r.
         ?subject foaf:isPrimaryTopicOf ?wikipedia_resource.
         ?subject dbo:wikiPageID ?id_wiki.
-        }
     }   
-    """ % (resource)
-
+    """ % (values_clause)
+    print(query)
     resultados = get_results(query)
     return resultados["results"]["bindings"]
 
 
-# PRUEBAAAAA
+# PRUEBAAAAA    
 def get_page_sections(page_id, language='en'):
     print(page_id)
     try:

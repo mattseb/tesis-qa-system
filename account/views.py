@@ -1,11 +1,10 @@
-# from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.forms import UserCreationForm
 from account.forms import CreateUserForm
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-# Create your views here.
+
 def registerPage(request):
     form = CreateUserForm()
     if request.method == 'POST':
