@@ -1,3 +1,4 @@
+import time
 from django.shortcuts import render
 import json
 from SPARQLWrapper import JSON, SPARQLWrapper
@@ -12,7 +13,7 @@ import wikipedia
 import pandas as pd
 from django.http import JsonResponse
 
-
+import concurrent.futures
 # Endpoint to make the query
 endPoint = "https://dbpedia.org/sparql"
 sparql = SPARQLWrapper(endPoint)
@@ -36,9 +37,19 @@ def index(request):
         lista = []
 
         lista += get_links(valoresSeleccionados)
-        print("ELelemtos ", len(lista))
-        for item in lista:
-            sections += get_page_sections(item['id_wiki']['value'])
+        print("Links relacionados  ", len(lista))
+        # for item in lista:
+        #     sections += get_page_sections(item['id_wiki']['value'])
+        # df = pd.DataFrame(sections, columns=['Seccion', 'Subseccion', 'Contenido'])
+        tiempo_inicio = time.time()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(get_page_sections, item['id_wiki']['value']) for item in lista]
+            
+            for num, future in enumerate(concurrent.futures.as_completed(futures)):
+                print(num)
+                sections += future.result()
+        tiempo_fin = time.time()
+        print("Se demoro un tiempo de ", str(tiempo_fin - tiempo_inicio))
         df = pd.DataFrame(sections, columns=['Seccion', 'Subseccion', 'Contenido'])
         
         new_rows = []
