@@ -25,7 +25,6 @@ def get_results(query):
     results = sparql.query().convert()
 
     print((results['results']['bindings']))
-    print(len(results['results']['bindings']))
     return results
 
 def index(request):
@@ -38,13 +37,9 @@ def index(request):
 
         lista += get_links(valoresSeleccionados)
         print("Links relacionados  ", len(lista))
-        # for item in lista:
-        #     sections += get_page_sections(item['id_wiki']['value'])
-        # df = pd.DataFrame(sections, columns=['Seccion', 'Subseccion', 'Contenido'])
         tiempo_inicio = time.time()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = [executor.submit(get_page_sections, item['id_wiki']['value']) for item in lista]
-            
             for num, future in enumerate(concurrent.futures.as_completed(futures)):
                 print(num)
                 sections += future.result()
@@ -211,31 +206,40 @@ def add_filter(request, filter_value, filter_action):
                 return JsonResponse({'message': 'Filtro eliminado exitosamente.'})
     return JsonResponse({'error': 'Error al agregar el filtro.'}, status=400)
 
-
+# Get the links of al the selected values
 def get_links(resources):
-    resources = [quote(resource) for resource in resources]
-    values_clause = " ".join(["(dbc:%s)" % resource for resource in resources])
-    # resource = quote(resource)
-    query = """
-    PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-    PREFIX dct: <http://purl.org/dc/terms/>
-    PREFIX dbo: <http://dbpedia.org/ontology/>
+    batch_size = 1000  # Tamaño del lote
+    results = []  # Almacenar los resultados de todos los lotes
 
-    SELECT DISTINCT ?wikipedia_resource ?id_wiki
-    WHERE {
-        VALUES (?r) {%s}
-   
-        ?subject dcterms:subject ?r.
-        ?subject foaf:isPrimaryTopicOf ?wikipedia_resource.
-        ?subject dbo:wikiPageID ?id_wiki.
-    }   
-    """ % (values_clause)
-    print(query)
-    resultados = get_results(query)
-    return resultados["results"]["bindings"]
+    for i in range(0, len(resources), batch_size):
+        batch = resources[i:i + batch_size]  # Obtener un lote de recursos
+        batch = [quote(resource) for resource in batch]  # Citar los recursos
 
+        values_clause = " ".join(["(dbc:%s)" % resource for resource in batch])
+        
+        query = """
+        PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX dct: <http://purl.org/dc/terms/>
+        PREFIX dbo: <http://dbpedia.org/ontology/>
 
+        SELECT DISTINCT ?wikipedia_resource ?id_wiki
+        WHERE {
+            VALUES (?r) {%s}
+       
+            ?subject dcterms:subject ?r.
+            ?subject foaf:isPrimaryTopicOf ?wikipedia_resource.
+            ?subject dbo:wikiPageID ?id_wiki.
+        }   
+        """ % (values_clause)
+
+        # Llamar a la función get_results para obtener los resultados del lote actual
+        resultados = get_results(query)
+        
+        # Agregar los resultados del lote actual a la lista de resultados
+        results.extend(resultados["results"]["bindings"])
+
+    return results
 # PRUEBAAAAA    
 def get_page_sections(page_id, language='en'):
     print(page_id)
