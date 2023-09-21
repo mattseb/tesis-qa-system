@@ -53,10 +53,13 @@ def index(request):
                 sections += future.result()
         tiempo_fin = time.time()
         print("Se demoro un tiempo de ", str(tiempo_fin - tiempo_inicio))
-        df = pd.DataFrame(sections, columns=['Seccion', 'Subseccion', 'Contenido', 'WikipageID', 'LastModified'])
+        df = pd.DataFrame(sections, columns=['PageURL', 'Title', 'CreationDate', 'Seccion', 'Subseccion', 'Contenido', 'WikipageID', 'LastModified'])
         new_rows = []
 
         for index, row in df.iterrows():
+            page_url = row['PageURL']
+            title = row['Title']
+            creation_date = row['CreationDate']
             content = row['Contenido']
             section = row['Seccion']
             subsection = row['Subseccion']
@@ -65,9 +68,9 @@ def index(request):
             secciones = subdividir_texto(content)
             
             for seccion in secciones:
-                new_rows.append((section, subsection, seccion, wikipageid, lastModified))
+                new_rows.append((page_url, title, creation_date, section, subsection, seccion, wikipageid, lastModified))
 
-        df = pd.DataFrame(new_rows, columns=['Seccion', 'Subseccion', 'Contenido', 'WikipageID', 'LastModified'])
+        df = pd.DataFrame(new_rows, columns=['PageURL', 'Title', 'CreationDate', 'Seccion', 'Subseccion', 'Contenido', 'WikipageID', 'LastModified'])
         df.to_csv("dominio3.csv", index=False)
 
         # connections.connect("default", host="localhost", port="19530")
@@ -316,6 +319,7 @@ def get_page_sections(page_id, language='en'):
     try:
         page = wikipedia.page(pageid=page_id, auto_suggest=False)
         title = page.title
+        page_url = page.url
         wikipageid = page.pageid
         # Define the page ID
         page_id = wikipageid
@@ -327,6 +331,8 @@ def get_page_sections(page_id, language='en'):
 
         # Extract the timestamp of the latest revision
         latest_rev = data['query']['pages'][str(page_id)]['revisions'][0]
+        creation_rev = data['query']['pages'][str(page_id)]['revisions'][-1]
+        creation_date = creation_rev['timestamp']
         last_modified = latest_rev['timestamp']
     except:
         sections = []
@@ -343,16 +349,16 @@ def get_page_sections(page_id, language='en'):
             line = line.strip()
         if line.startswith("===") and line.endswith("===") and line not in exclude_sections:
             sub_section = line.strip("=")
-            sections.append((current_section, sub_section, "", wikipageid, last_modified))
+            sections.append((page_url, title, creation_date, current_section, sub_section, "", wikipageid, last_modified))
         elif line.startswith("==") and line.endswith("==") and line not in exclude_sections:
             section = line.strip("=")
             current_section = section
         else:
             if current_section and line not in exclude_sections:
                 if sections:
-                    sections[-1] = (sections[-1][0], sections[-1][1], sections[-1][2] + " " + line, wikipageid, last_modified)
+                    sections[-1] = (page_url, title, creation_date, sections[-1][0], sections[-1][1], sections[-1][2] + " " + line, wikipageid, last_modified)
                 else:
-                    sections.append((current_section, None, line, wikipageid, last_modified))
+                    sections.append((page_url, title, creation_date, current_section, None, line, wikipageid, last_modified))
     return sections
 
 
@@ -360,7 +366,7 @@ def subdividir_texto(texto, max_palabras=100):
     secciones = []
     palabras = texto.split()
     inicio = 0
-# 387
+
     while inicio < len(palabras):
         fin = inicio + max_palabras
         if 'Aerobic' in palabras[inicio]:
