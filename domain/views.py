@@ -11,7 +11,16 @@ import xml.etree.ElementTree as ET
 from django.http import JsonResponse
 import wikipedia
 import pandas as pd
+from sentence_transformers import SentenceTransformer
 from django.http import JsonResponse
+from pymilvus import (
+    connections,
+    utility,
+    FieldSchema,
+    CollectionSchema,
+    DataType,
+    Collection,
+)
 
 import concurrent.futures
 # Endpoint to make the query
@@ -23,7 +32,6 @@ def get_results(query):
     sparql.setQuery(query)
     sparql.setReturnFormat(JSON)
     results = sparql.query().convert()
-
     print((results['results']['bindings']))
     return results
 
@@ -45,23 +53,52 @@ def index(request):
                 sections += future.result()
         tiempo_fin = time.time()
         print("Se demoro un tiempo de ", str(tiempo_fin - tiempo_inicio))
-        df = pd.DataFrame(sections, columns=['Seccion', 'Subseccion', 'Contenido'])
-        
+        df = pd.DataFrame(sections, columns=['Seccion', 'Subseccion', 'Contenido', 'WikipageID', 'LastModified'])
         new_rows = []
 
         for index, row in df.iterrows():
             content = row['Contenido']
             section = row['Seccion']
             subsection = row['Subseccion']
-            
+            wikipageid = row['WikipageID']
+            lastModified = row['LastModified'] 
             secciones = subdividir_texto(content)
             
             for seccion in secciones:
-                new_rows.append((section, subsection, seccion))
+                new_rows.append((section, subsection, seccion, wikipageid, lastModified))
 
-        df_new = pd.DataFrame(new_rows, columns=['Seccion', 'Subseccion', 'Contenido'])
-        df_new.to_csv("dominio3.csv", index=False)
+        df = pd.DataFrame(new_rows, columns=['Seccion', 'Subseccion', 'Contenido', 'WikipageID', 'LastModified'])
+        df.to_csv("dominio3.csv", index=False)
 
+        # connections.connect("default", host="localhost", port="19530")
+        # collection_name = 'my_collection'
+        # din = 768
+
+        # fields=[
+        #     FieldSchema(name='id', dtype=DataType.INT64, is_primary=True, auto_id=True),
+        #     FieldSchema(name='embedding', dtype=DataType.FLOAT_VECTOR, dim=din),
+        #     FieldSchema(name='metadata', dtype=DataType.VARCHAR, max_length=2560)
+        # ]
+        
+        # schema = CollectionSchema(fields)
+        # collection = Collection(name=collection_name, schema=schema)
+
+        # retriever = SentenceTransformer("flax-sentence-embeddings/all_datasets_v3_mpnet-base", device='cpu')
+        # batch_size = 64
+        # with concurrent.futures.ThreadPoolExecutor() as executor:
+        #     to_upsert = []
+        #     for i in (range(0, len(df), batch_size)):
+        #         i_end = min(i+batch_size, len(df))
+        #         batch = df.iloc[i:i_end]
+        #         futures = []
+        #         for j in range(len(batch)):
+        #             future = executor.submit(retriever.encode, batch.iloc[j]["Contenido"])
+        #             futures.append(future)
+        #         for future, meta in zip(futures, batch.to_dict(orient="records")):
+        #             emb = future.result().tolist()
+        #             to_upsert.append({'embedding': emb, 'metadata': str(meta)})
+        #         collection.insert(to_upsert)
+        #         print(collection.num_entities)
         return render(request, 'content.html', {'contador': len(lista)})
     return render(request, 'index.html')
 
@@ -241,15 +278,61 @@ def get_links(resources):
 
     return results
 # PRUEBAAAAA    
+# def get_page_sections(page_id, language='en'):
+#     print(page_id)
+#     try:
+#         title = wikipedia.page(pageid=page_id, auto_suggest=False).title
+#     except:
+#         sections = []
+#         return sections
+#     wikipedia.set_lang(language)
+#     page = wikipedia.page(title, auto_suggest=False)
+#     content = page.content.split('\n')
+
+#     sections = []
+#     current_section = None
+#     exclude_sections = ["== See also ==", "== References ==", "== External links =="]
+#     for line in content:
+#         if(line):
+#             line = line.strip()
+#         if line.startswith("===") and line.endswith("===") and line not in exclude_sections:
+#             sub_section = line.strip("=")
+#             sections.append((current_section, sub_section, ""))
+#         elif line.startswith("==") and line.endswith("==") and line not in exclude_sections:
+#             section = line.strip("=")
+#             current_section = section
+#         else:
+#             if current_section and line not in exclude_sections:
+#                 if sections:
+#                     sections[-1] = (sections[-1][0], sections[-1][1], sections[-1][2] + " " + line)
+#                 else:
+#                     sections.append((current_section, None, line))
+#     return sections
+
 def get_page_sections(page_id, language='en'):
+    import requests
+    import json
     print(page_id)
     try:
-        title = wikipedia.page(pageid=page_id, auto_suggest=False).title
+        page = wikipedia.page(pageid=page_id, auto_suggest=False)
+        title = page.title
+        wikipageid = page.pageid
+        # Define the page ID
+        page_id = wikipageid
+
+        # Fetch the revision history using the Wikipedia API
+        url = f"https://en.wikipedia.org/w/api.php?action=query&prop=revisions&rvprop=timestamp&format=json&pageids={page_id}"
+        response = requests.get(url)
+        data = json.loads(response.text)
+
+        # Extract the timestamp of the latest revision
+        latest_rev = data['query']['pages'][str(page_id)]['revisions'][0]
+        last_modified = latest_rev['timestamp']
     except:
         sections = []
         return sections
+
     wikipedia.set_lang(language)
-    page = wikipedia.page(title, auto_suggest=False)
     content = page.content.split('\n')
 
     sections = []
@@ -260,29 +343,34 @@ def get_page_sections(page_id, language='en'):
             line = line.strip()
         if line.startswith("===") and line.endswith("===") and line not in exclude_sections:
             sub_section = line.strip("=")
-            sections.append((current_section, sub_section, ""))
+            sections.append((current_section, sub_section, "", wikipageid, last_modified))
         elif line.startswith("==") and line.endswith("==") and line not in exclude_sections:
             section = line.strip("=")
             current_section = section
         else:
             if current_section and line not in exclude_sections:
                 if sections:
-                    sections[-1] = (sections[-1][0], sections[-1][1], sections[-1][2] + " " + line)
+                    sections[-1] = (sections[-1][0], sections[-1][1], sections[-1][2] + " " + line, wikipageid, last_modified)
                 else:
-                    sections.append((current_section, None, line))
+                    sections.append((current_section, None, line, wikipageid, last_modified))
     return sections
+
 
 def subdividir_texto(texto, max_palabras=100):
     secciones = []
     palabras = texto.split()
     inicio = 0
-
+# 387
     while inicio < len(palabras):
         fin = inicio + max_palabras
-        while fin > inicio and fin < len(palabras) and palabras[fin][-1] != '.':
+        if 'Aerobic' in palabras[inicio]:
+            print("holaaaa")
+        while fin > inicio and fin < len(palabras) and palabras[fin][-1] != '.' and '.' not in palabras[fin]:
             fin -= 1
-
         seccion = ' '.join(palabras[inicio:fin + 1])
+        if len(seccion.split()) <= 5:
+            fin += 100
+            seccion = ' '.join(palabras[inicio:fin + 1])
         secciones.append(seccion)
         inicio = fin + 1
 
