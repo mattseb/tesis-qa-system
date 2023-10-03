@@ -1,30 +1,30 @@
 {% extends 'base.html' %}
 {% block title %}
-Filtros
+Filters
 {% endblock title %}
 {% block content %}
 {% block js %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 {% endblock js %}
-<h1>Configuraciones Globales</h1>
+<h1>Global Settings</h1>
 <div class="container-filters">
-  <h2>Filtros</h2>
+  <h2>Filters: words that are not expected to be in concept names.</h2>
   <ul class="list-group">
     {% for filter in data_list %}
     <li id="filterItem{{ filter }}" class="list-group-item d-flex justify-content-between align-items-center">
       {{filter}}
       <span class="badge badge-primary badge-pill">
-        <a href="#" onclick=deleteFilter(filterItem{{ filter }})>Eliminar</a>
+        <a href="#" onclick=deleteFilter(filterItem{{ filter }})>Delete</a>
       </span>
     </li>
     {% endfor %}
   </ul>
   <br>
   <div class="input-group mb-3">
-    <input type="text" class="form-control" id="newFilterInput" placeholder="Ingresar filtro"
+    <input type="text" class="form-control" id="newFilterInput" placeholder="Enter a new filter"
       aria-describedby="basic-addon2">
     <div class="input-group-append">
-      <button class="btn btn-outline-secondary" id="addFilterButton" type="button" onclick=addFilter()>Agregar</button>
+      <button class="btn btn-outline-secondary" id="addFilterButton" type="button" onclick=addFilter()>Add</button>
     </div>
   </div>
 </div>

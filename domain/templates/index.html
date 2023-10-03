@@ -8,11 +8,11 @@ Crear Corpus
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 {% endblock %}
 {% block content %}
-    <h1>Ingrese el dominio deseado</h1>
+    <h1>Enter the root concept</h1>
     <form id="miFormulario" method="post">
         {% csrf_token %}
         <select class="dominio" name="dominio"></select>
-        <b>Filtro</b>
+        <b>Filter</b>
         <select class="filter" name="filter" id="filter">
             <option value="0">URI (_)</option>
             <option value="1">Tag ( )</option>
@@ -25,8 +25,8 @@ Crear Corpus
         <input type="hidden" name="contador" id="contador" value="0">
         <input type="hidden" name="valores_seleccionados" id="valores_seleccionados">
         <div>
-            <input style="margin-top: 20px;" type="button" id="masSubdominios" value="Obtener más subdominios">
-            <input type="submit" id="enviarTodo" value="Enviar">
+            <input style="margin-top: 20px;" type="button" id="masSubdominios" value="Get more concepts">
+            <input type="submit" id="enviarTodo" value="Send">
         </div>
     </form>
     <p id="resultado"></p>
@@ -42,7 +42,7 @@ Crear Corpus
         
         $('.dominio').select2({
             closeOnSelect: true,
-            placeholder: 'Ingrese un dominio',
+            placeholder: 'Domain',
             width: "80%",
             sorter: data => data.sort((a, b) => a.text.localeCompare(b.text)),
             ajax: {
@@ -138,7 +138,7 @@ Crear Corpus
 
         $('.subdominios').select2({
             closeOnSelect: false,
-            placeholder: 'Seleccione los subdominios',
+            placeholder: 'Select the subdomains',
             width: "80%",
             sorter: data => data.sort((a, b) => a.text.localeCompare(b.text)),
         });

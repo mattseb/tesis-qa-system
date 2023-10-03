@@ -39,11 +39,11 @@ def index(request):
     # Get all the subdomains
     if request.method == 'POST':
         sections = []
-        valoresSeleccionados = request.POST.get('valores_seleccionados')
-        valoresSeleccionados = json.loads(valoresSeleccionados)
+        selectedValues = request.POST.get('valores_seleccionados')
+        selectedValues = json.loads(selectedValues)
         lista = []
 
-        lista += get_links(valoresSeleccionados)
+        lista += get_links(selectedValues)
         print("Links relacionados  ", len(lista))
         tiempo_inicio = time.time()
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -53,22 +53,27 @@ def index(request):
                 sections += future.result()
         tiempo_fin = time.time()
         print("Se demoro un tiempo de ", str(tiempo_fin - tiempo_inicio))
-        df = pd.DataFrame(sections, columns=['Seccion', 'Subseccion', 'Contenido', 'WikipageID', 'LastModified'])
+        df = pd.DataFrame(sections, columns=['PageURL', 'Title', 'CreationDate', 'Seccion', 'Subseccion', 'Contenido', 'WikipageID', 'LastModified'])
+        df.to_csv("dominio3.csv", index=False)
+        
         new_rows = []
 
-        for index, row in df.iterrows():
-            content = row['Contenido']
-            section = row['Seccion']
-            subsection = row['Subseccion']
-            wikipageid = row['WikipageID']
-            lastModified = row['LastModified'] 
-            secciones = subdividir_texto(content)
+        # for index, row in df.iterrows():
+        #     page_url = row['PageURL']
+        #     title = row['Title']
+        #     creation_date = row['CreationDate']
+        #     content = row['Contenido']
+        #     section = row['Seccion']
+        #     subsection = row['Subseccion']
+        #     wikipageid = row['WikipageID']
+        #     lastModified = row['LastModified'] 
+        #     secciones = subdividir_texto(content)
             
-            for seccion in secciones:
-                new_rows.append((section, subsection, seccion, wikipageid, lastModified))
+        #     for seccion in secciones:
+        #         new_rows.append((page_url, title, creation_date, section, subsection, seccion, wikipageid, lastModified))
 
-        df = pd.DataFrame(new_rows, columns=['Seccion', 'Subseccion', 'Contenido', 'WikipageID', 'LastModified'])
-        df.to_csv("dominio3.csv", index=False)
+        # df = pd.DataFrame(new_rows, columns=['PageURL', 'Title', 'CreationDate', 'Seccion', 'Subseccion', 'Contenido', 'WikipageID', 'LastModified'])
+        # df.to_csv("dominio3.csv", index=False)
 
         # connections.connect("default", host="localhost", port="19530")
         # collection_name = 'my_collection'
@@ -245,14 +250,15 @@ def add_filter(request, filter_value, filter_action):
 
 # Get the links of al the selected values
 def get_links(resources):
-    batch_size = 1000  # Tamaño del lote
+    batch_size = 100  # Tamaño del lote
     results = []  # Almacenar los resultados de todos los lotes
 
     for i in range(0, len(resources), batch_size):
         batch = resources[i:i + batch_size]  # Obtener un lote de recursos
         batch = [quote(resource) for resource in batch]  # Citar los recursos
+        
+        values_clause = " ".join(["(dbc:%s)" % resource.replace("/", r"\/") if "/" in resource else "(dbc:%s)" % resource for resource in batch])
 
-        values_clause = " ".join(["(dbc:%s)" % resource for resource in batch])
         
         query = """
         PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
@@ -316,6 +322,7 @@ def get_page_sections(page_id, language='en'):
     try:
         page = wikipedia.page(pageid=page_id, auto_suggest=False)
         title = page.title
+        page_url = page.url
         wikipageid = page.pageid
         # Define the page ID
         page_id = wikipageid
@@ -327,6 +334,8 @@ def get_page_sections(page_id, language='en'):
 
         # Extract the timestamp of the latest revision
         latest_rev = data['query']['pages'][str(page_id)]['revisions'][0]
+        creation_rev = data['query']['pages'][str(page_id)]['revisions'][-1]
+        creation_date = creation_rev['timestamp']
         last_modified = latest_rev['timestamp']
     except:
         sections = []
@@ -337,22 +346,30 @@ def get_page_sections(page_id, language='en'):
 
     sections = []
     current_section = None
+    sub_section = None
     exclude_sections = ["== See also ==", "== References ==", "== External links =="]
     for line in content:
-        if(line):
+        if(line != ''):
             line = line.strip()
+        else:
+            continue
         if line.startswith("===") and line.endswith("===") and line not in exclude_sections:
             sub_section = line.strip("=")
-            sections.append((current_section, sub_section, "", wikipageid, last_modified))
-        elif line.startswith("==") and line.endswith("==") and line not in exclude_sections:
+            # sections.append((page_url, title, creation_date, current_section, sub_section, '', wikipageid, last_modified))
+        elif line.startswith("==") and line.endswith("=="):
             section = line.strip("=")
             current_section = section
         else:
-            if current_section and line not in exclude_sections:
+            if current_section not in exclude_sections:
                 if sections:
-                    sections[-1] = (sections[-1][0], sections[-1][1], sections[-1][2] + " " + line, wikipageid, last_modified)
+                    if sections[-1][4] == sub_section and sections[-1][3] == current_section:
+                        sections[-1] = (page_url, title, creation_date, sections[-1][3], sections[-1][4], sections[-1][5] + " " + line, wikipageid, last_modified)
+                    else:
+                        sections.append((page_url, title, creation_date, current_section, sub_section, line, wikipageid, last_modified))
                 else:
-                    sections.append((current_section, None, line, wikipageid, last_modified))
+                    sections.append((page_url, title, creation_date, current_section, sub_section, line, wikipageid, last_modified))
+            elif current_section == None:
+                sections.append((page_url, title, creation_date, None, None, line, wikipageid, last_modified))            
     return sections
 
 
@@ -360,7 +377,7 @@ def subdividir_texto(texto, max_palabras=100):
     secciones = []
     palabras = texto.split()
     inicio = 0
-# 387
+
     while inicio < len(palabras):
         fin = inicio + max_palabras
         if 'Aerobic' in palabras[inicio]:
