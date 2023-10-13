@@ -1,9 +1,9 @@
 import time
 from django.shortcuts import render
 import json
+import requests
 from SPARQLWrapper import JSON, SPARQLWrapper
 from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from urllib.parse import quote
 from django.contrib.auth.decorators import login_required
@@ -58,16 +58,16 @@ def index(request):
         
         new_rows = []
 
-        # for index, row in df.iterrows():
-        #     page_url = row['PageURL']
-        #     title = row['Title']
-        #     creation_date = row['CreationDate']
-        #     content = row['Contenido']
-        #     section = row['Seccion']
-        #     subsection = row['Subseccion']
-        #     wikipageid = row['WikipageID']
-        #     lastModified = row['LastModified'] 
-        #     secciones = subdividir_texto(content)
+        for index, row in df.iterrows():
+            page_url = row['PageURL']
+            title = row['Title']
+            creation_date = row['CreationDate']
+            content = row['Contenido']
+            section = row['Seccion']
+            subsection = row['Subseccion']
+            wikipageid = row['WikipageID']
+            lastModified = row['LastModified'] 
+            secciones = subdividir_texto(content)
             
         #     for seccion in secciones:
         #         new_rows.append((page_url, title, creation_date, section, subsection, seccion, wikipageid, lastModified))
@@ -248,7 +248,7 @@ def add_filter(request, filter_value, filter_action):
                 return JsonResponse({'message': 'Filtro eliminado exitosamente.'})
     return JsonResponse({'error': 'Error al agregar el filtro.'}, status=400)
 
-# Get the links of al the selected values
+# Get the links of all the selected values
 def get_links(resources):
     batch_size = 100  # Tamaño del lote
     results = []  # Almacenar los resultados de todos los lotes
@@ -316,8 +316,6 @@ def get_links(resources):
 #     return sections
 
 def get_page_sections(page_id, language='en'):
-    import requests
-    import json
     print(page_id)
     try:
         page = wikipedia.page(pageid=page_id, auto_suggest=False)
