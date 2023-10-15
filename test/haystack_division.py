@@ -57,8 +57,8 @@ def split_content_haystack():
         # df.head()
 
         # Extraer las primeras 'numero_de_filas_a_extraer' filas y almacenarlas en un nuevo DataFrame
-        df_test = df.head(5)
-        # df_test = df
+        # df_test = df.head(5)
+        df_test = df
 
         # Add a new column 'id' starting from 1 at the first position
         df_test.insert(0, 'id', range(1, len(df_test) + 1))
@@ -68,6 +68,8 @@ def split_content_haystack():
         new_df = pd.DataFrame(columns=df_test.columns.tolist() + new_columns)
 
         for i in range(len(df_test)):
+
+            print("----- Linea " , i, " -----")
 
             # Especifica el índice de fila y la columna que deseas extraer
             fila = i  # Por ejemplo, extraeremos la fila 2 (índice 2)
