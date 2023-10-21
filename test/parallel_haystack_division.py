@@ -1,4 +1,7 @@
 
+from concurrent.futures import ThreadPoolExecutor
+import os
+import time
 from haystack.nodes import TextConverter, PreProcessor
 import logging
 from haystack.nodes import PreProcessor
@@ -155,15 +158,15 @@ def leer_csv(file_path):
     try:
         # Leer el CSV en un DataFrame
         df = pd.read_csv(file_path)
-        return df.head(5)
+        return df
     except Exception as e:
         print(f"Error al leer el CSV: {e}")
         return None
 
-def crear_txt(id, contenido):
+def crear_txt(contenido, i):
     try:
         # Crear el archivo TXT y escribir el contenido
-        nombre_archivo = "haystack-division/ContenidoCelda" + str(id)  + ".txt"
+        nombre_archivo = "haystack-division/ContenidoCelda" + str(i) + ".txt"
         with open(nombre_archivo, 'w', encoding='UTF-8') as archivo:
             archivo.write(contenido)
         print(f"El archivo {nombre_archivo} se ha creado y el contenido se ha almacenado correctamente.")
@@ -187,6 +190,52 @@ def procesar_contenido(contenido):
     docs_default = preprocessor.process([contenido])
     return docs_default
 
+def procesar_fila(i, contenido, df):
+    print(f"----- Línea {i} -----")
+    nombre_archivo = crear_txt(contenido, i)
+    if nombre_archivo is None:
+        return None
+
+    doc_txt = procesar_documento(nombre_archivo)
+    if doc_txt is None:
+        return None
+
+    docs_default = procesar_contenido(doc_txt)
+    
+    fragments_list = []
+    split_id_list = []
+    tokens_list = []
+    os.remove("haystack-division/ContenidoCelda" + str(i) + ".txt")
+
+    for element in docs_default:
+        document_dict = element.to_dict()
+
+        for key, value in document_dict.items():
+            if key == 'content':
+                fragments_list.append(value)
+                tokens_list.append(lenght_token(value,'google/flan-t5-base'))
+            elif key == 'meta':
+                for key_meta, value_meta in value.items():
+                    split_id_list.append(value_meta)
+
+    result = []
+    for num, element in enumerate(fragments_list):
+        result.append({
+            'id': df.at[i, 'id'],
+            'PageURL': df.at[i, 'PageURL'],
+            'Title': df.at[i, 'Title'],
+            'CreationDate': df.at[i, 'CreationDate'],
+            'Seccion': df.at[i, 'Seccion'],
+            'Subseccion': df.at[i, 'Subseccion'],
+            'WikipageID': df.at[i, 'WikipageID'],
+            'LastModified': df.at[i, 'LastModified'],
+            'Contenido': df.at[i, 'Contenido'],
+            'split': fragments_list[num],
+            'split_id': split_id_list[num],
+            'tokens': tokens_list[num]
+        })
+
+    return result
 def split_content_haystack(file_path):
     df = leer_csv(file_path)
     if df is None:
@@ -196,48 +245,20 @@ def split_content_haystack(file_path):
     
     new_df = pd.DataFrame(columns=df.columns.tolist() + ['split', 'split_id', 'tokens'])
 
-    for i, contenido in enumerate(df['Contenido']):
-        print(f"----- Línea {i} -----")
-        nombre_archivo = crear_txt(i, contenido)
-        if nombre_archivo is None:
-            continue
+    tasks = []
 
-        doc_txt = procesar_documento(nombre_archivo)
-        if doc_txt is None:
-            continue
+    with ThreadPoolExecutor() as executor:
+        for i, contenido in enumerate(df['Contenido']):
+            task = executor.submit(procesar_fila, i, contenido, df)
+            tasks.append(task)
 
-        docs_default = procesar_contenido(doc_txt)
+    for task in tasks:
+        result = task.result()
+        if result is not None:
+            # new_df = new_df.append(pd.DataFrame(result), ignore_index=True)
+            for res in result:
+                new_df.loc[len(new_df)] = res
 
-        fragments_list = []
-        split_id_list = []
-        tokens_list = []
-
-        for element in docs_default:
-            document_dict = element.to_dict()
-
-            for key, value in document_dict.items():
-                if key == 'content':
-                    fragments_list.append(value)
-                    tokens_list.append(lenght_token(value,'google/flan-t5-base'))
-                elif key == 'meta':
-                    for key_meta, value_meta in value.items():
-                        split_id_list.append(value_meta)
-
-        for num, element in enumerate(fragments_list):
-            new_df.loc[len(new_df)] = {
-                'id': df.at[i, 'id'],
-                'PageURL': df.at[i, 'PageURL'],
-                'Title': df.at[i, 'Title'],
-                'CreationDate': df.at[i, 'CreationDate'],
-                'Seccion': df.at[i, 'Seccion'],
-                'Subseccion': df.at[i, 'Subseccion'],
-                'WikipageID': df.at[i, 'WikipageID'],
-                'LastModified': df.at[i, 'LastModified'],
-                'Contenido': df.at[i, 'Contenido'],
-                'split': fragments_list[num],
-                'split_id': split_id_list[num],
-                'tokens': tokens_list[num]
-            }
 
     columns_to_drop = ['id', 'Contenido']
     new_df = new_df.drop(columns=columns_to_drop)
@@ -246,4 +267,10 @@ def split_content_haystack(file_path):
     print("DataFrame se ha guardado en 'split_data.csv'")
 
 # Llamada a la función
+start = time.time()
+print(start)
 split_content_haystack("test/dominio3Test.csv")
+end = time.time()
+print(end)
+final = end - start
+print("Se demoro un tiempo de ", final)

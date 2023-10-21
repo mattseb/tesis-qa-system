@@ -283,37 +283,6 @@ def get_links(resources):
         results.extend(resultados["results"]["bindings"])
 
     return results
-# PRUEBAAAAA    
-# def get_page_sections(page_id, language='en'):
-#     print(page_id)
-#     try:
-#         title = wikipedia.page(pageid=page_id, auto_suggest=False).title
-#     except:
-#         sections = []
-#         return sections
-#     wikipedia.set_lang(language)
-#     page = wikipedia.page(title, auto_suggest=False)
-#     content = page.content.split('\n')
-
-#     sections = []
-#     current_section = None
-#     exclude_sections = ["== See also ==", "== References ==", "== External links =="]
-#     for line in content:
-#         if(line):
-#             line = line.strip()
-#         if line.startswith("===") and line.endswith("===") and line not in exclude_sections:
-#             sub_section = line.strip("=")
-#             sections.append((current_section, sub_section, ""))
-#         elif line.startswith("==") and line.endswith("==") and line not in exclude_sections:
-#             section = line.strip("=")
-#             current_section = section
-#         else:
-#             if current_section and line not in exclude_sections:
-#                 if sections:
-#                     sections[-1] = (sections[-1][0], sections[-1][1], sections[-1][2] + " " + line)
-#                 else:
-#                     sections.append((current_section, None, line))
-#     return sections
 
 def get_page_sections(page_id, language='en'):
     print(page_id)
