@@ -80,7 +80,7 @@ def procesar_documento(file_path):
         return None
 
 def procesar_contenido(contenido):
-    preprocessor = create_preprocessor_haystack("sentence", 3)
+    preprocessor = create_preprocessor_haystack("sentence", 4)
     docs_default = preprocessor.process([contenido])
     return docs_default
 
