@@ -1,0 +1,31 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistema de Preguntas y Respuestas</title>
+    <!-- Enlace al archivo CSS externo -->
+    <link rel="stylesheet" href="{% static 'styles/question.css' %}">
+</head>
+<body>
+    <header>
+        <h1>Sistema de Preguntas y Respuestas</h1>
+    </header>
+
+    <main>  
+        <section>
+            <h2>¿Tienes una pregunta?</h2>
+            <!-- Formulario de ingreso de pregunta -->
+            <form action="#" method="post">
+                <input type="text" placeholder="Escribe tu pregunta aquí" name="pregunta" required>
+                <button type="submit">Enviar</button>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2023 Sistema de Preguntas y Respuestas</p>
+        <!-- Enlaces a políticas del sitio, redes sociales, etc. -->
+    </footer>
+</body>
+</html>

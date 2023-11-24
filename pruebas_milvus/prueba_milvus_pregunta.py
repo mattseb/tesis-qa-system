@@ -12,10 +12,10 @@ from pymilvus import (
 )
 
 # Especifica la ruta del archivo CSV
-ruta_del_csv = 'split_data4.csv'
+# ruta_del_csv = 'split_data4.csv'
 
-df = pd.read_csv(ruta_del_csv)
-df = df.head(10)
+# df = pd.read_csv(ruta_del_csv)
+# df = df.head(10)
 
 connections.connect("default", host="localhost", port="19530")
 collection_name = 'my_collection'
@@ -32,25 +32,10 @@ collection_name = 'my_collection'
 # collection = Collection(name=collection_name, schema=schema)
 collection = Collection(name=collection_name)
 
-retriever = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device='cpu')
+model = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device='cpu')
 
 
 collection.load()
-# batch_size = 64
-# with concurrent.futures.ThreadPoolExecutor() as executor:
-#     to_upsert = []
-#     for i in (range(0, len(df), batch_size)):
-#         i_end = min(i+batch_size, len(df))
-#         batch = df.iloc[i:i_end]
-#         futures = []
-#         for j in range(len(batch)):
-#             future = executor.submit(retriever.encode, batch.iloc[j]["split"])
-#             futures.append(future)
-#         for future, meta in zip(futures, batch.to_dict(orient="records")):
-#             emb = future.result().tolist()
-#             to_upsert.append({'embedding': emb, 'metadata': str(meta)})
-#         collection.insert(to_upsert)
-#         print(collection.num_entities)
 
 # Crea un índice en la colección
 index_params = {
@@ -70,10 +55,11 @@ print(utility.index_building_progress("my_collection"))
 # time.sleep(1)
 
 # # Make a question
-question = "What is Carbon dioxide?"
+question = "What is CO2?"
+# question = "What is covid?"
 
 # # Vectorize the question
-question_vector = retriever.encode([question])[0].tolist()
+question_vector = model.encode([question])[0].tolist()
 
 # # Search for the most similar vector in Milvus
 search_params = {'nprobe': 16}  # You can adjust nprobe based on your needs
@@ -83,7 +69,7 @@ search_result = collection.search(
     data=[question_vector], 
     anns_field='embedding', 
     param=search_params, 
-    limit=2,
+    limit=4,
     output_fields=['metadata'],
 )
 
@@ -93,7 +79,8 @@ answers = [hit.entity.get('metadata') for hit in hits ]
 answers_processed = []
 for answer in answers:
     answer = answer.replace('nan', 'None')
-    answers_processed.append(ast.literal_eval(answer)['split'])
+    # answers_processed.append(ast.literal_eval(answer)['split'])
+    answers_processed.append(ast.literal_eval(answer))
 
 print("Question:", question)
 print("Answer:", answers_processed)

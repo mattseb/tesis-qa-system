@@ -106,17 +106,17 @@ def get_max_tokens_llm(llm):
     return max_length
 
 
-def procesar_fila(i, contenido, df):
+def procesar_fila(fila):
     fragments_list = []
     split_id_list = []
     tokens_list = []
     result = []
 
-    print(f"----- Línea {i} -----")
+    print(f"----- Línea {fila['id']} -----")
 
     #column_value = row['Contenido']
 
-    num_tokens = lenght_token(contenido,'sequelbox/StellarBright')
+    num_tokens = lenght_token(fila["Contenido"],'sequelbox/StellarBright')
     max_tokens = get_max_tokens_llm('sequelbox/StellarBright')
 
     if num_tokens <= max_tokens:
@@ -125,16 +125,16 @@ def procesar_fila(i, contenido, df):
         print(f"Num tokens columns: {num_tokens} < {max_tokens}")
         print('===================FIN=======================')
         result.append({
-            'id': df.at[i, 'id'],
-            'PageURL': df.at[i, 'PageURL'],
-            'Title': df.at[i, 'Title'],
-            'CreationDate': df.at[i, 'CreationDate'],
-            'Seccion': df.at[i, 'Seccion'],
-            'Subseccion': df.at[i, 'Subseccion'],
-            'WikipageID': df.at[i, 'WikipageID'],
-            'LastModified': df.at[i, 'LastModified'],
-            'Contenido': df.at[i, 'Contenido'],
-            'split': contenido,
+            'id': fila['id'],
+            'PageURL': fila['PageURL'],
+            'Title': fila['Title'],
+            'CreationDate': fila['CreationDate'],
+            'Seccion': fila['Seccion'],
+            'Subseccion': fila['Subseccion'],
+            'WikipageID': fila['WikipageID'],
+            'LastModified': fila['LastModified'],
+            'Contenido': fila['Contenido'],
+            'split': fila['Contenido'],
             'split_id': 0,
             'tokens': num_tokens
             })
@@ -143,7 +143,7 @@ def procesar_fila(i, contenido, df):
 
         print('------------------------ DIVISION ------------------------')
 
-        nombre_archivo = crear_txt(contenido, i)
+        nombre_archivo = crear_txt(fila["Contenido"], fila["id"])
         if nombre_archivo is None:
             return None
 
@@ -153,7 +153,7 @@ def procesar_fila(i, contenido, df):
         
         docs_default = procesar_contenido(doc_txt)
 
-        os.remove("C:\\Users\\mateo\\Documents\\Universidad\\Tesis\\tesis-qa-system\\haystack-division\\ContenidoCelda" + str(i) + ".txt")
+        os.remove("C:\\Users\\mateo\\Documents\\Universidad\\Tesis\\tesis-qa-system\\haystack-division\\ContenidoCelda" + str(fila["id"]) + ".txt")
 
         for element in docs_default:
             document_dict = element.to_dict()
@@ -168,27 +168,21 @@ def procesar_fila(i, contenido, df):
 
         for num, element in enumerate(fragments_list):
             result.append({
-                'id': df.at[i, 'id'],
-                'PageURL': df.at[i, 'PageURL'],
-                'Title': df.at[i, 'Title'],
-                'CreationDate': df.at[i, 'CreationDate'],
-                'Seccion': df.at[i, 'Seccion'],
-                'Subseccion': df.at[i, 'Subseccion'],
-                'WikipageID': df.at[i, 'WikipageID'],
-                'LastModified': df.at[i, 'LastModified'],
-                'Contenido': df.at[i, 'Contenido'],
+                'id': fila['id'],
+                'PageURL': fila['PageURL'],
+                'Title': fila['Title'],
+                'CreationDate': fila['CreationDate'],
+                'Seccion': fila['Seccion'],
+                'Subseccion': fila['Subseccion'],
+                'WikipageID': fila['WikipageID'],
+                'LastModified': fila['LastModified'],
+                'Contenido': fila['Contenido'],
                 'split': fragments_list[num],
                 'split_id': split_id_list[num],
                 'tokens': tokens_list[num]
             })
 
     return result   
-
-def chunked(iterable, chunk_size):
-    """Generador para dividir una lista en trozos más pequeños"""
-    for i in range(0, len(iterable), chunk_size):
-        yield iterable[i:i + chunk_size]
-
 
 def split_content_haystack(file_path):
     df = leer_csv(file_path)
@@ -203,13 +197,12 @@ def split_content_haystack(file_path):
 
     tasks = []
 
-    with ProcessPoolExecutor(max_workers=12) as executor:
-        for i, contenido in enumerate(df['Contenido']):
-            task = executor.submit(procesar_fila, i, contenido, df)
+    with ProcessPoolExecutor(max_workers=30) as executor:
+        for inidce, fila in df.iterrows():
+            task = executor.submit(procesar_fila, fila)
             tasks.append(task)
         print(len(tasks))
 
-    concurrent.futures.wait(tasks)
 
     # Recolectas los resultados de las tareas
     result = [task.result() for task in tasks]
@@ -219,7 +212,7 @@ def split_content_haystack(file_path):
             new_df.loc[len(new_df)] = item  # Agregar cada elemento al nuevo DataFrame
 
     new_df.to_csv('C:\\Users\\mateo\\Documents\\Universidad\\Tesis\\tesis-qa-system\\DataSplit\\SentenceSplit\\split_data_sentence_5_total.csv', index=False)
-    print("DataFrame se ha guardado en 'split_data_sentence_2.csv'")
+    print("DataFrame se ha guardado en 'split_data_sentence_5_total.csv'")
 
 if __name__ == '__main__':
     # Llamada a la función
