@@ -1,6 +1,5 @@
     
 from concurrent.futures import ProcessPoolExecutor
-import concurrent.futures
 import os
 import time
 from haystack.nodes import TextConverter, PreProcessor
@@ -8,10 +7,7 @@ from haystack.nodes import PreProcessor
 import pandas as pd
 import numpy as np
 from transformers import AutoTokenizer
-from haystack.utils import convert_files_to_docs
 from haystack.nodes import TextConverter, PreProcessor
-
-
 import torch
 
 def create_preprocessor_haystack(split_by_user, split_length_user):
@@ -37,16 +33,6 @@ def create_preprocessor_haystack(split_by_user, split_length_user):
         return preprocessor
     except Exception as e:
         print(f"An error occurred in the preprocessor: {e}")
-
-# def lenght_token(text, llm):
-#     try:
-#         tokenizer = AutoTokenizer.from_pretrained(llm)
-#         #Tokenize the input text
-#         tokens = tokenizer.tokenize(text)
-#         return len(tokens)
-
-#     except Exception as e:
-#         print(f"An error occurred in the lenghtToken: {e}")
 
 def lenght_token(text, llm):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -94,7 +80,7 @@ def procesar_documento(file_path):
         return None
     
 def procesar_contenido(contenido):
-    preprocessor = create_preprocessor_haystack("sentence", 5)
+    preprocessor = create_preprocessor_haystack("sentence", 4)
     docs_default = preprocessor.process([contenido])
     return docs_default
 
@@ -211,8 +197,8 @@ def split_content_haystack(file_path):
         for item in res:
             new_df.loc[len(new_df)] = item  # Agregar cada elemento al nuevo DataFrame
 
-    new_df.to_csv('C:\\Users\\mateo\\Documents\\Universidad\\Tesis\\tesis-qa-system\\DataSplit\\SentenceSplit\\split_data_sentence_5_total.csv', index=False)
-    print("DataFrame se ha guardado en 'split_data_sentence_5_total.csv'")
+    new_df.to_csv('C:\\Users\\mateo\\Documents\\Universidad\\Tesis\\tesis-qa-system\\DataSplit\\SentenceSplit\\split_data_sentence_4_total.csv', index=False)
+    print("DataFrame se ha guardado en 'split_data_sentence_4_total.csv'")
 
 if __name__ == '__main__':
     # Llamada a la función

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}
+    Contenido
+{% endblock title %}
+{% block stylesheets %}
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+{% endblock stylesheets %}
+{% block content %}
+    <div>
+        <p>Se encontraron {{ contador }} enlaces relacionados</p>
+        <p>Se demoro un timepo de {{ tiempo_final }} segundos</p>
+    </div>
+{% endblock content %}
