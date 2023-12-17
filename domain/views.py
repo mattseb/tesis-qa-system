@@ -350,7 +350,6 @@ def leer_csv(file_path):
 def crear_txt(contenido, i):
     try:
         # Crear el archivo TXT y escribir el contenido
-        # nombre_archivo = "haystack-division/ContenidoCelda" + str(i) + ".txt"
         nombre_archivo = "C:\\Users\\mateo\\Documents\\Universidad\\Tesis\\tesis-qa-system\\haystack-division\\ContenidoCelda" + str(i) + ".txt"
         with open(nombre_archivo, 'w', encoding='UTF-8') as archivo:
             archivo.write(contenido)
@@ -463,7 +462,6 @@ def procesar_fila(fila):
 
 def split_content_haystack(file_path):
     df = leer_csv(file_path)
-    # df_chunks = list(chunked(df['Contenido'], len(df['Contenido']) // 24))  # Dividir el DataFrame en chunks
 
     if df is None:
         return

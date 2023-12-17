@@ -35,14 +35,14 @@ if __name__ == '__main__':
     df = df.head(10)
 
     connections.connect("default", host="localhost", port="19530")
-    collection_name = 'my_collection'
+    collection_name = 'prueba_final_2'
     collection = Collection(name=collection_name)
 
     retriever = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device='cuda')
     collection.load()
-    batch_size = 64
+    batch_size = 10
 
-    with concurrent.futures.ProcessPoolExecutor(max_workers=23) as executor:
+    with concurrent.futures.ProcessPoolExecutor(max_workers=15) as executor:
         to_upsert = []
         for i in (range(0, len(df), batch_size)):
             i_end = min(i+batch_size, len(df))
@@ -58,15 +58,16 @@ if __name__ == '__main__':
             print(collection.num_entities)
 
     # Crea un índice en la colección
-    index_params = {
-        'metric_type': 'L2',
-        'index_type': 'IVF_FLAT', 
-        'params': {'nlist': 16384}
-    }
+    # index_params = {
+    #     'metric_type': 'L2',
+    #     'index_type': 'IVF_FLAT', 
+    #     'params': {'nlist': 16384}
+    # }
 
-    collection.create_index(
-        field_name='embedding', 
-        index_params=index_params
-    )
+    # collection.create_index(
+    #     field_name='embedding', 
+    #     index_params=index_params
+    # )
 
-    print(utility.index_building_progress("my_collection"))
+    print(utility.index_building_progress("prueba_final_2"))
+    utility.drop_collection("prueba_final_2")

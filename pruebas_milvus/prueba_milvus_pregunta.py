@@ -7,7 +7,7 @@ from pymilvus import (
 )
 
 connections.connect("default", host="localhost", port="19530")
-collection_name = 'my_collection'
+collection_name = 'prueba_final_2'
 
 
 collection = Collection(name=collection_name)
@@ -20,11 +20,6 @@ index_params = {
     'index_type': 'IVF_FLAT', 
     'params': {'nlist': 16384}
 }
-
-collection.create_index(
-    field_name='embedding', 
-    index_params=index_params
-)
 
 print(utility.index_building_progress("my_collection"))
 question = "Enlist some examples of contaminants that are in a natural environment"
@@ -48,5 +43,6 @@ for answer in answers:
     answer = answer.replace('nan', 'None')
     answers_processed.append(ast.literal_eval(answer))
 
+answer_obj = ast.literal_eval(answers_processed[0])
 print("Question:", question)
-print("Answer:", answers_processed)
+print("Answer:", answer_obj['split'])

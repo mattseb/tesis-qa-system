@@ -1,31 +1,73 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Sistema de Preguntas y Respuestas</title>
-    <!-- Enlace al archivo CSS externo -->
-    <link rel="stylesheet" href="{% static 'styles/question.css' %}">
-</head>
-<body>
-    <header>
-        <h1>Sistema de Preguntas y Respuestas</h1>
-    </header>
+    <head>
+        <meta charset="UTF-8">
+        <title>Question and Answer System</title>
+        <!-- Enlace al archivo CSS externo -->
+        <link rel="stylesheet" href="{% static 'styles/question.css' %}">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    </head>
+    <body>
+        <header>
+            <h1>Question and Answer System</h1>
+        </header>
+        <main>
+            <section>
+                <h2>Make a question</h2>
+                <!-- Formulario de ingreso de pregunta -->
+                <form action="#" method="post">
+                    {% csrf_token %}
+                    <input type="text"
+                           placeholder="Write your question here"
+                           name="question"
+                           required>
+                    <button type="submit">Send</button>
+                </form>
+            </section>
+        </main>
+        <footer>
+            <p>© 2023 Question and Answer System</p>
+            <!-- Enlaces a políticas del sitio, redes sociales, etc. -->
+        </footer>
+        <script>
+        $(document).ready(function(){
+            $("form").on('submit', function(event){
+                event.preventDefault();
+                var question = $(this).find('input[name="question"]').val();
+                var csrfToken = $('input[name="csrfmiddlewaretoken"]').val(); // Obtener el valor del token CSRF
+    
+                $.ajax({
+                    url: './', // Reemplaza esto con la URL de tu endpoint
+                    type: 'POST',
+                    data: {
+                        'question': question,
+                        'csrfmiddlewaretoken': csrfToken  // Incluir el token CSRF en los datos enviados
+                    },
+                    success: function(response){
+                        // Dividir la respuesta en líneas usando el salto de línea (\n)
+                        var lines = response.split('\n');
 
-    <main>  
-        <section>
-            <h2>¿Tienes una pregunta?</h2>
-            <!-- Formulario de ingreso de pregunta -->
-            <form action="#" method="post">
-                <input type="text" placeholder="Escribe tu pregunta aquí" name="pregunta" required>
-                <button type="submit">Enviar</button>
-            </form>
-        </section>
-    </main>
+                        // Crear un nuevo div
+                        var newDiv = $('<div></div>');
 
-    <footer>
-        <p>© 2023 Sistema de Preguntas y Respuestas</p>
-        <!-- Enlaces a políticas del sitio, redes sociales, etc. -->
-    </footer>
-</body>
+                        // Recorrer cada línea y crear un elemento <p> para cada una
+                        lines.forEach(function(line) {
+                            // Si la línea no está vacía, crea un párrafo
+                            if (line.trim() !== '') {
+                                var newParagraph = $('<p></p>').text(line);
+                                newDiv.append(newParagraph); // Agregar el párrafo al div
+                            }
+                        })
+                        // Agregar el nuevo div al body
+                        $('body').append(newDiv);
+                    },
+                    error: function(error){
+                        console.log(error);
+                    }
+                });
+            });
+        });
+        </script>
+    </body>
 </html>
