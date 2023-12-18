@@ -1,36 +1,40 @@
+import os
 import time
-from django.shortcuts import render
 import json
 import requests
+import wikipedia
+import re
+import time
+import torch
+import concurrent.futures
+from django.shortcuts import render
 from SPARQLWrapper import JSON, SPARQLWrapper
 from django.shortcuts import render
 from django.http import JsonResponse
 from urllib.parse import quote
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-import wikipedia
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 from django.http import JsonResponse
-import re
 from concurrent.futures import ProcessPoolExecutor
-import os
-import time
 from haystack.nodes import TextConverter, PreProcessor
 from haystack.nodes import PreProcessor
 import pandas as pd
 from transformers import AutoTokenizer
 from haystack.nodes import TextConverter, PreProcessor
-import torch
 from pymilvus import (
     connections,
     Collection,
 )
-
-import concurrent.futures
+## Global variables
 # Endpoint to make the query
 endPoint = "https://dbpedia.org/sparql"
 sparql = SPARQLWrapper(endPoint)
+# Final paths to save the CSV files
+ruta_del_csv = 'csv\\dominioFinal.csv'
+ruta_del_csv_spliteado = 'csv\\dominioFinalSpliteado.csv'
+
 
 # Query endpoint and parse as JSON
 def get_results(query):
@@ -54,12 +58,12 @@ def index(request):
             for num, future in enumerate(concurrent.futures.as_completed(futures)):
                 sections += future.result()
         df = pd.DataFrame(sections, columns=['PageURL', 'Title', 'CreationDate', 'Seccion', 'Subseccion', 'Contenido', 'WikipageID', 'LastModified'])
-        df.to_csv("csv\\dominioFinal.csv", index=False)
+        df.to_csv(ruta_del_csv, index=False)
         tiempo_final = results(request, len(lista))
 
         #Subir datos a milvis
         inicio = time.time()
-        ruta_del_csv = 'csv\\dominioFinalSpliteado.csv'
+        ruta_del_csv = ruta_del_csv_spliteado
 
         df = pd.read_csv(ruta_del_csv)
         df = df
@@ -87,7 +91,7 @@ def index(request):
 def results(request, contador):
     start = time.time()
     print(start)
-    split_content_haystack("csv\\dominioFinal.csv")
+    split_content_haystack(ruta_del_csv)
     end = time.time()
     print(end)
     final = end - start
@@ -165,7 +169,6 @@ def get_subdomains(request):
 
         if resultados:
             lista = []
-
             for resultado in resultados:
                 for item in resultado:
                     url = item["c1"]["value"]
@@ -173,7 +176,6 @@ def get_subdomains(request):
                     lista.append(clave)
             json_data = json.dumps(lista)
             return JsonResponse(json_data, safe=False)
-
     return JsonResponse({'error': 'No se pudo procesar la solicitud'})
 
 def get_reource_query(resource, level):
@@ -411,13 +413,10 @@ def procesar_fila(fila):
 
     print(f"----- Línea {fila['id']} -----")
 
-    #column_value = row['Contenido']
-
     num_tokens = lenght_token(fila["Contenido"],'sequelbox/StellarBright')
     max_tokens = get_max_tokens_llm('sequelbox/StellarBright')
 
-    if num_tokens <= max_tokens:
-    
+    if num_tokens <= max_tokens:  
         print('===================INICIO=======================')
         print(f"Num tokens columns: {num_tokens} < {max_tokens}")
         print('===================FIN=======================')
@@ -497,7 +496,6 @@ def split_content_haystack(file_path):
             tasks.append(task)
         print(len(tasks))
 
-
     # Recolectas los resultados de las tareas
     result = [task.result() for task in tasks]
 
@@ -505,5 +503,5 @@ def split_content_haystack(file_path):
         for item in res:
             new_df.loc[len(new_df)] = item  # Agregar cada elemento al nuevo DataFrame
 
-    new_df.to_csv('csv\\dominioFinalSpliteado.csv', index=False)
+    new_df.to_csv(ruta_del_csv_spliteado, index=False)
     print("DataFrame se ha guardado en 'dominioFinalSpliteado.csv'")
