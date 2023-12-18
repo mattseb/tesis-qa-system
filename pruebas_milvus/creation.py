@@ -26,9 +26,8 @@ collection = Collection(name=collection_name, schema=schema)
 collection_final = Collection("prueba_final_2")
 
 index_params = {
-  "metric_type":"L2",
-  "index_type":"FLAT",
-  "params":{"nlist":1024}
+  "metric_type":"COSINE",
+  "index_type":"FLAT"
 }
 
 collection_final.create_index(

@@ -21,11 +21,14 @@
                     <input type="text"
                            placeholder="Write your question here"
                            name="question"
+                           autocomplete="off"
                            required>
                     <button type="submit">Send</button>
                 </form>
             </section>
         </main>
+        <div class="answer-content">
+        </div>
         <footer>
             <p>© 2023 Question and Answer System</p>
             <!-- Enlaces a políticas del sitio, redes sociales, etc. -->
@@ -45,22 +48,19 @@
                         'csrfmiddlewaretoken': csrfToken  // Incluir el token CSRF en los datos enviados
                     },
                     success: function(response){
-                        // Dividir la respuesta en líneas usando el salto de línea (\n)
-                        var lines = response.split('\n');
-
-                        // Crear un nuevo div
-                        var newDiv = $('<div></div>');
-
-                        // Recorrer cada línea y crear un elemento <p> para cada una
-                        lines.forEach(function(line) {
-                            // Si la línea no está vacía, crea un párrafo
-                            if (line.trim() !== '') {
-                                var newParagraph = $('<p></p>').text(line);
-                                newDiv.append(newParagraph); // Agregar el párrafo al div
-                            }
-                        })
+                        response = response.substring(1, response.length - 1);
+                        // Expresión regular para encontrar representaciones Unicode
+                        const regex = /\\u([\d\w]{4})/gi;
+                        // Reemplazar todas las instancias de representaciones Unicode por emojis
+                        response = response.replace(regex, (_, grupoCapturado) =>
+                            String.fromCodePoint(parseInt(grupoCapturado, 16))
+                        );
+                        var newDiv = $('<div class="answer"></div>');
+                        const formattedText = response.replaceAll('\\n', '<br>');
+                        var newParagraph = $('<p></p>').html(formattedText);
+                        newDiv.append(newParagraph); // Agregar el párrafo al div
                         // Agregar el nuevo div al body
-                        $('body').append(newDiv);
+                        $('.answer-content').append(newDiv);
                     },
                     error: function(error){
                         console.log(error);

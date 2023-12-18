@@ -19,16 +19,11 @@ import time
 from haystack.nodes import TextConverter, PreProcessor
 from haystack.nodes import PreProcessor
 import pandas as pd
-import numpy as np
 from transformers import AutoTokenizer
 from haystack.nodes import TextConverter, PreProcessor
 import torch
 from pymilvus import (
     connections,
-    utility,
-    FieldSchema,
-    CollectionSchema,
-    DataType,
     Collection,
 )
 
@@ -54,20 +49,45 @@ def index(request):
 
         lista += get_links(selectedValues)
         print("Links relacionados  ", len(lista))
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=30) as executor:
             futures = [executor.submit(get_page_sections, item['id_wiki']['value']) for item in lista]
             for num, future in enumerate(concurrent.futures.as_completed(futures)):
                 sections += future.result()
         df = pd.DataFrame(sections, columns=['PageURL', 'Title', 'CreationDate', 'Seccion', 'Subseccion', 'Contenido', 'WikipageID', 'LastModified'])
-        df.to_csv("csv\\dominio10.csv", index=False)
+        df.to_csv("csv\\dominioFinal.csv", index=False)
         tiempo_final = results(request, len(lista))
+
+        #Subir datos a milvis
+        inicio = time.time()
+        ruta_del_csv = 'csv\\dominioFinalSpliteado.csv'
+
+        df = pd.read_csv(ruta_del_csv)
+        df = df
+
+        connections.connect("default", host="localhost", port="19530")
+        collection_name = 'prueba_final_2'
+        collection = Collection(name=collection_name)
+
+        retriever = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device='cuda')
+        collection.load()
+
+        for index, row in df.iterrows():
+            print('==== ITER ========', index)
+            emb = retriever.encode(row["split"]).tolist()
+            meta = row.to_dict()
+            to_upsert = {'embedding': emb, 'metadata': '"' + str(meta) + '"'}
+            collection.insert(data=[to_upsert])
+            print(collection.num_entities)
+            print(collection.is_empty)
+        fin = time.time()
+        print("Se demoro un tiempo de ", fin - inicio, " segundos")
         return render (request, 'results.html', {'contador': len(lista),'tiempo_final': tiempo_final})    
     return render(request, 'index.html')
 
 def results(request, contador):
     start = time.time()
     print(start)
-    split_content_haystack("C:\\Users\\mateo\\Documents\\Universidad\\Tesis\\tesis-qa-system\\csv\\dominio10.csv")
+    split_content_haystack("csv\\dominioFinal.csv")
     end = time.time()
     print(end)
     final = end - start
@@ -276,8 +296,9 @@ def get_page_sections(page_id, language='en'):
     sections = []
     current_section = None
     sub_section = None
-    exclude_sections = ["== See also ==", "== References ==", "== External links =="]
-    for line in content:
+    exclude_sections = [" See also ", " References ", " External links "]
+    filter_content = [element for element in content if element != '']
+    for line in filter_content:
         if(line != ''):
             line = line.strip()
         else:
@@ -330,7 +351,7 @@ def lenght_token(text, llm):
     print(device)
     try:
         tokenizer = AutoTokenizer.from_pretrained(llm, return_tensors='pt')  # Indicar que se usará PyTorch
-        tokenizer.model_max_length = 2048
+        # tokenizer.model_max_length = 512
         tokens = tokenizer.encode(text, return_tensors='pt').to(device)  # Mover los tokens a la GPU
         return tokens.size(1)  # Obtener la longitud de los tokens
     except Exception as e:
@@ -377,7 +398,7 @@ def procesar_contenido(contenido):
 
 def get_max_tokens_llm(llm):
     tokenizer = AutoTokenizer.from_pretrained(llm)
-    tokenizer.model_max_length = 2048
+    tokenizer.model_max_length = 512
     max_length = tokenizer.model_max_length
     return max_length
 
@@ -414,9 +435,7 @@ def procesar_fila(fila):
             'split_id': 0,
             'tokens': num_tokens
             })
-        
     else:
-
         print('------------------------ DIVISION ------------------------')
 
         nombre_archivo = crear_txt(fila["Contenido"], fila["id"])
@@ -472,7 +491,7 @@ def split_content_haystack(file_path):
 
     tasks = []
 
-    with ProcessPoolExecutor(max_workers=30) as executor:
+    with ProcessPoolExecutor(max_workers=25) as executor:
         for inidce, fila in df.iterrows():
             task = executor.submit(procesar_fila, fila)
             tasks.append(task)
@@ -486,5 +505,5 @@ def split_content_haystack(file_path):
         for item in res:
             new_df.loc[len(new_df)] = item  # Agregar cada elemento al nuevo DataFrame
 
-    new_df.to_csv('C:\\Users\\mateo\\Documents\\Universidad\\Tesis\\tesis-qa-system\\DataSplit\\SentenceSplit\\split_data_sentence_4_total.csv', index=False)
-    print("DataFrame se ha guardado en 'split_data_sentence_4_total.csv'")
+    new_df.to_csv('csv\\dominioFinalSpliteado.csv', index=False)
+    print("DataFrame se ha guardado en 'dominioFinalSpliteado.csv'")
