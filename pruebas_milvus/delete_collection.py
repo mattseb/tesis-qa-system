@@ -13,4 +13,4 @@ if __name__ == '__main__':
     retriever = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device='cuda')
     collection.load()
     batch_size = 64
-    utility.drop_collection("prueba_final_2")
+    utility.drop_collection("prueba_final_3")

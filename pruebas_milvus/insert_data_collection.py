@@ -8,13 +8,13 @@ from pymilvus import (
 
 if __name__ == '__main__':
     inicio = time.time()
-    ruta_del_csv = 'C:\\Users\\mateo\\Documents\\Universidad\\Tesis\\tesis-qa-system\\DataSplit\\SentenceSplit\\split_data_sentence_5_total_2212.csv'
+    ruta_del_csv = 'csv\\dominioFinalSpliteado6.csv'
 
     df = pd.read_csv(ruta_del_csv)
     df = df
 
     connections.connect("default", host="localhost", port="19530")
-    collection_name = 'prueba_final_2'
+    collection_name = 'prueba_final_3'
     collection = Collection(name=collection_name)
 
     retriever = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device='cuda')
@@ -24,15 +24,9 @@ if __name__ == '__main__':
         print('==== ITER ========', index)
         emb = retriever.encode(row["split"]).tolist()
         meta = row.to_dict()
-        to_upsert = {'embedding': emb, 'metadata': '"' + str(meta) + '"'}
+        to_upsert = {'embedding': emb, 'metadata': meta}
         collection.insert(data=[to_upsert])
         print(collection.num_entities)
         print(collection.is_empty)
     fin = time.time()
     print("Se demoro un tiempo de ", fin - inicio, " segundos")
-
-    # result = collection.query(
-    #     expr="metadata != 'None'",
-    #     output_fields=["metadata"],
-    # )
-    # print(len(result))

@@ -39,7 +39,7 @@ def lenght_token(text, llm):
     print(device)
     try:
         tokenizer = AutoTokenizer.from_pretrained(llm, return_tensors='pt')  # Indicar que se usará PyTorch
-        tokenizer.model_max_length = 2048
+        # tokenizer.model_max_length = 512
         tokens = tokenizer.encode(text, return_tensors='pt').to(device)  # Mover los tokens a la GPU
         return tokens.size(1)  # Obtener la longitud de los tokens
     except Exception as e:
@@ -80,14 +80,14 @@ def procesar_documento(file_path):
         return None
     
 def procesar_contenido(contenido):
-    preprocessor = create_preprocessor_haystack("sentence", 4)
+    preprocessor = create_preprocessor_haystack("sentence", 6)
     docs_default = preprocessor.process([contenido])
     return docs_default
 
 
 def get_max_tokens_llm(llm):
     tokenizer = AutoTokenizer.from_pretrained(llm)
-    tokenizer.model_max_length = 2048
+    tokenizer.model_max_length = 512
     max_length = tokenizer.model_max_length
     return max_length
 
@@ -183,7 +183,7 @@ def split_content_haystack(file_path):
 
     tasks = []
 
-    with ProcessPoolExecutor(max_workers=30) as executor:
+    with ProcessPoolExecutor(max_workers=10) as executor:
         for inidce, fila in df.iterrows():
             task = executor.submit(procesar_fila, fila)
             tasks.append(task)
@@ -197,20 +197,16 @@ def split_content_haystack(file_path):
         for item in res:
             new_df.loc[len(new_df)] = item  # Agregar cada elemento al nuevo DataFrame
 
-    new_df.to_csv('C:\\Users\\mateo\\Documents\\Universidad\\Tesis\\tesis-qa-system\\DataSplit\\SentenceSplit\\split_data_sentence_4_total.csv', index=False)
-    print("DataFrame se ha guardado en 'split_data_sentence_4_total.csv'")
+    new_df.to_csv('csv\\dominioFinalSpliteado7.csv', index=False)
+    print("DataFrame se ha guardado en csv dominioFinalSpliteado7.csv")
 
 if __name__ == '__main__':
     # Llamada a la función
     start = time.time()
     print(start)
     # split_content_haystack("test/dominio3Test.csv")
-    split_content_haystack("C:\\Users\\mateo\\Documents\\Universidad\\Tesis\\tesis-qa-system\\csv\\dominio3.csv")
+    split_content_haystack("csv\\dominioFinal.csv")
     end = time.time()
     print(end)
     final = end - start
     print("Se demoro un tiempo de ", final)
-    
-    # Verificar si hay una GPU disponible
-    
-    

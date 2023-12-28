@@ -44,6 +44,8 @@ def get_results(query):
     return results
 
 def index(request):
+    ruta_del_csv = 'csv\\dominioFinal.csv'
+    ruta_del_csv_spliteado = 'csv\\dominioFinalSpliteado.csv'
     # Get all the subdomains when the user clicks Send 
     if request.method == 'POST':
         sections = []
@@ -63,13 +65,13 @@ def index(request):
 
         #Subir datos a milvis
         inicio = time.time()
-        ruta_del_csv = ruta_del_csv_spliteado
+        ruta_del_csv = 'csv\\dominioFinalSpliteado.csv'
 
         df = pd.read_csv(ruta_del_csv)
         df = df
 
         connections.connect("default", host="localhost", port="19530")
-        collection_name = 'prueba_final_2'
+        collection_name = 'prueba_final_3'
         collection = Collection(name=collection_name)
 
         retriever = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device='cuda')
@@ -79,7 +81,7 @@ def index(request):
             print('==== ITER ========', index)
             emb = retriever.encode(row["split"]).tolist()
             meta = row.to_dict()
-            to_upsert = {'embedding': emb, 'metadata': '"' + str(meta) + '"'}
+            to_upsert = {'embedding': emb, 'metadata': meta}
             collection.insert(data=[to_upsert])
             print(collection.num_entities)
             print(collection.is_empty)
@@ -294,6 +296,7 @@ def get_page_sections(page_id, language='en'):
 
     wikipedia.set_lang(language)
     content = page.content.split('\n')
+    print(content)
 
     sections = []
     current_section = None
@@ -305,10 +308,10 @@ def get_page_sections(page_id, language='en'):
             line = line.strip()
         else:
             continue
-        if line.startswith("===") and line.endswith("===") and line not in exclude_sections:
+        if line.startswith("=== ") and line.endswith(" ===") and line not in exclude_sections:
             sub_section = line.strip("=")
             # sections.append((page_url, title, creation_date, current_section, sub_section, '', wikipageid, last_modified))
-        elif line.startswith("==") and line.endswith("=="):
+        elif line.startswith("== ") and line.endswith(" =="):
             section = line.strip("=")
             current_section = section
         else:
@@ -393,7 +396,7 @@ def procesar_documento(file_path):
         return None
     
 def procesar_contenido(contenido):
-    preprocessor = create_preprocessor_haystack("sentence", 4)
+    preprocessor = create_preprocessor_haystack("sentence", 6)
     docs_default = preprocessor.process([contenido])
     return docs_default
 
@@ -406,6 +409,8 @@ def get_max_tokens_llm(llm):
 
 
 def procesar_fila(fila):
+    # modelo = 'sequelbox/StellarBright'
+    modelo = 'TheBloke/StellarBright-AWQ'
     fragments_list = []
     split_id_list = []
     tokens_list = []
@@ -413,8 +418,8 @@ def procesar_fila(fila):
 
     print(f"----- Línea {fila['id']} -----")
 
-    num_tokens = lenght_token(fila["Contenido"],'sequelbox/StellarBright')
-    max_tokens = get_max_tokens_llm('sequelbox/StellarBright')
+    num_tokens = lenght_token(fila["Contenido"],modelo)
+    max_tokens = get_max_tokens_llm(modelo)
 
     if num_tokens <= max_tokens:  
         print('===================INICIO=======================')
@@ -455,7 +460,7 @@ def procesar_fila(fila):
             for key, value in document_dict.items():
                 if key == 'content':
                     fragments_list.append(value)
-                    tokens_list.append(lenght_token(value,'sequelbox/StellarBright'))
+                    tokens_list.append(lenght_token(value,modelo))
                 elif key == 'meta':
                     for key_meta, value_meta in value.items():
                         split_id_list.append(value_meta)

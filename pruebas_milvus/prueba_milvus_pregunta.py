@@ -7,7 +7,7 @@ from pymilvus import (
 )
 
 connections.connect("default", host="localhost", port="19530")
-collection_name = 'prueba_final_2'
+collection_name = 'prueba_final_3'
 
 
 collection = Collection(name=collection_name)
@@ -21,7 +21,7 @@ index_params = {
     'params': {'nlist': 16384}
 }
 
-print(utility.index_building_progress("my_collection"))
+print(utility.index_building_progress(collection_name))
 question = "Enlist some examples of contaminants that are in a natural environment"
 
 question_vector = model.encode([question])[0].tolist()

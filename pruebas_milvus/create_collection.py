@@ -12,18 +12,18 @@ connections.connect("default", host="localhost", port="19530")
 
 din = 768
 
-collection_name = 'prueba_final_2'
+collection_name = 'prueba_final_3'
 
 fields=[
     FieldSchema(name='id', dtype=DataType.INT64, is_primary=True, auto_id=True),
     FieldSchema(name='embedding', dtype=DataType.FLOAT_VECTOR, dim=din),
-    FieldSchema(name='metadata', dtype=DataType.VARCHAR, max_length=60000)
+    FieldSchema(name='metadata', dtype=DataType.JSON)
 ]
         
 schema = CollectionSchema(fields)
 collection = Collection(name=collection_name, schema=schema)
 
-collection_final = Collection("prueba_final_2")
+collection_final = Collection("prueba_final_3")
 
 index_params = {
   "metric_type":"COSINE",

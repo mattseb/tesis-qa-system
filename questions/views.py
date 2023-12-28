@@ -18,7 +18,7 @@ def index(request):
         question = request.POST['question']
 
         connections.connect("default", host="localhost", port="19530")
-        collection_name = 'prueba_final_2'
+        collection_name = 'prueba_final_3'
 
 
         collection = Collection(name=collection_name)
@@ -32,7 +32,7 @@ def index(request):
             'params': {'nlist': 16384}
         }
 
-        print(utility.index_building_progress("my_collection"))
+        print(utility.index_building_progress(collection_name))
 
         question_vector = model.encode([question])[0].tolist()
 
@@ -45,17 +45,16 @@ def index(request):
             output_fields=['metadata'],
         )
 
-
+        import re
         hits = [result[0] for result in search_result]
         answers = [hit.entity.get('metadata') for hit in hits ]
         answers_processed = []
         for answer in answers:
-            answer = answer.replace('nan', 'None')
-            answers_processed.append(ast.literal_eval(answer))
+            answers_processed.append(answer)
 
-        answer_obj = ast.literal_eval(answers_processed[0])
-        raw_answer = answer_obj['split']
-        print("Answer:", answer_obj['split'])
+        raw_answer = answers_processed[0]['split']
+        row_urls = [url['PageURL'] for url in answers_processed]
+        print("Answer:", raw_answer)
 
         #Prompt (Pregunta al modelo)
         prompt = question
@@ -79,11 +78,14 @@ def index(request):
 
         model_path = hf_hub_download(repo_id=model_name_or_path, filename=model_basename)
         
-        respuesta = llama_with_context(model_path, topic, prompt, context, prompt_template, max_tokens,  temperature, top_p, repeat_penalty, top_k, echo)
+        # respuesta = llama_with_context(model_path, topic, prompt, context, prompt_template, max_tokens,  temperature, top_p, repeat_penalty, top_k, echo)
+        respuesta = "Prueba"
         print(respuesta)
-        
-        json_data = json.dumps(respuesta)
-        return JsonResponse(json_data, safe=False)
+        data = {
+            'answer': respuesta,
+            'urls': row_urls
+        }
+        return JsonResponse(data)
     return render(request, 'index2.html')
 
 def llama_with_context(model_path_value,topic_value, prompt_value,
@@ -95,7 +97,8 @@ def llama_with_context(model_path_value,topic_value, prompt_value,
         model_path=model_path_value,
         n_threads=8, # CPU cores
         n_batch=1024, # Should be between 1 and n_ctx, consider the amount of VRAM in your GPU.
-        n_gpu_layers=32 # Change this value based on your model and your GPU VRAM pool.
+        n_gpu_layers=32, # Change this value based on your model and your GPU VRAM pool.
+        n_ctx=2048
         )
 
     #See the number of layers in GPU

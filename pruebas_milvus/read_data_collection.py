@@ -5,14 +5,14 @@ from pymilvus import (
 )    
 
 connections.connect("default", host="localhost", port="19530")
-collection_name = 'prueba_final_2'
+collection_name = 'prueba_final_3'
 collection = Collection(name=collection_name)
 retriever = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device='cuda')
 collection.load()
 print(collection.num_entities)
 
 result = collection.query(
-    expr="metadata != 'None'",
+    expr="id > 1",
     output_fields=["embedding","metadata"],
     limit=1,
 )
