@@ -51,6 +51,7 @@
                     success: function(response){
                         answer = response.answer
                         urls = response.urls
+                        titles = response.titles
                         answer = answer.substring(1, answer.length - 1);
                         // Expresión regular para encontrar representaciones Unicode
                         const regex = /\\u([\d\w]{4})/gi;
@@ -58,7 +59,7 @@
                         answer = answer.replace(regex, (_, grupoCapturado) =>
                             String.fromCodePoint(parseInt(grupoCapturado, 16))
                         );
-                        var newDiv = $('<div class="answer"></div>');
+                        var newDiv = $('<div class="answer d-flex flex-column"></div>');
                         const formattedText = answer.replaceAll('\\n', '<br>');
                         var newParagraph = $('<p></p>').html(formattedText);
                         newDiv.append(newParagraph); // Agregar el párrafo al div
@@ -68,7 +69,7 @@
                         var divLinks = $('<div class="links"></div>');
                         for (let i = 0; i < urls.length; i++) {
                             const url = urls[i];
-                            var button = $('<a></a>').attr('href', url).attr('target', '_blank').addClass('btn btn-primary').text('Enlace ' + (i + 1));
+                            var button = $('<a></a>').attr('href', url).attr('target', '_blank').addClass('btn btn-primary').text(titles[i]);
 
                             // Agregar el enlace a la tarjeta
                             divLinks.append(button);

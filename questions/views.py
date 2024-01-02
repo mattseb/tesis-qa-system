@@ -41,25 +41,25 @@ def index(request):
             data=[question_vector], 
             anns_field='embedding', 
             param=search_params, 
-            limit=1,
+            limit=2,
             output_fields=['metadata'],
         )
 
         import re
-        hits = [result[0] for result in search_result]
-        answers = [hit.entity.get('metadata') for hit in hits ]
-        answers_processed = []
-        for answer in answers:
-            answers_processed.append(answer)
-
-        raw_answer = answers_processed[0]['split']
-        row_urls = [url['PageURL'] for url in answers_processed]
-        print("Answer:", raw_answer)
+        print(search_result)
+        print(type(search_result))
+        hits = search_result
+        array = []
+        for hits in iter(search_result):
+            data_list = [hit.entity.get('metadata') for hit in hits]
+        raw_answer = [answer['split'] for answer in data_list]
+        row_urls = [url['PageURL'] for url in data_list]
+        raw_titles = [title['Title'] for title in data_list]
 
         #Prompt (Pregunta al modelo)
         prompt = question
         #Context
-        context = raw_answer
+        context = ' '.join(raw_answer)
         topic = 'Contamination'
         #template
         prompt_template=f'''[INST] <<SYS>>
@@ -78,12 +78,12 @@ def index(request):
 
         model_path = hf_hub_download(repo_id=model_name_or_path, filename=model_basename)
         
-        # respuesta = llama_with_context(model_path, topic, prompt, context, prompt_template, max_tokens,  temperature, top_p, repeat_penalty, top_k, echo)
-        respuesta = "Prueba"
-        print(respuesta)
+        respuesta = llama_with_context(model_path, topic, prompt, context, prompt_template, max_tokens,  temperature, top_p, repeat_penalty, top_k, echo)
+        # respuesta = "Prueba"
         data = {
             'answer': respuesta,
-            'urls': row_urls
+            'urls': row_urls,
+            'titles': raw_titles,
         }
         return JsonResponse(data)
     return render(request, 'index2.html')
