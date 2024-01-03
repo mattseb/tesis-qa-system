@@ -1,0 +1,52 @@
+[
+    {
+        "question": "What is the most common air pollutant, responsible for respiratory problems and acid rain?",
+        "answer_wikipedia": "Sulfur dioxide, originating from fossil fuel burning, causes respiratory issues, acid rain, and ecosystem damage.",
+        "answer_bard": "Fossil fuel burning releases sulfur dioxide, the main air pollutant causing respiratory problems, acid rain, and harm to ecosystems."
+    },
+    {
+        "question": "What is the main contributor to water pollution in agricultural areas?",
+        "answer_wikipedia": "Agricultural runoff, containing fertilizers, pesticides, and animal waste, pollutes water, leading to algae blooms, oxygen depletion, and harm to aquatic life.",
+        "answer_bard": "Runoff from farms, filled with fertilizers, pesticides, and animal waste, is the top polluter of agricultural waters, causing algae growth, oxygen depletion, and harming aquatic life."
+    },
+    {
+        "question": "What type of pollution negatively affects animal migration patterns and disrupts ecosystems?",
+        "answer_wikipedia": "Light pollution from artificial sources disrupts animal migration patterns, interferes with natural cycles, and can harm breeding and predator-prey relationships.",
+        "answer_bard": "Artificial light sources create light pollution, disrupting animal migration, messing with their day-night rhythms, and potentially harming breeding and predator-prey dynamics."
+    },
+    {
+        "question": "What is the primary greenhouse gas responsible for climate change?",
+        "answer_wikipedia": "Carbon dioxide, released through activities like burning fossil fuels, deforestation, and industrial processes, is the main greenhouse gas driving climate change.",
+        "answer_bard": "Burning fossil fuels, deforestation, and industrial processes release carbon dioxide, the primary greenhouse gas responsible for driving climate change."
+    },
+    {
+        "question": "What is the harmful effect of microplastics on marine life?",
+        "answer_wikipedia": "Microplastics, tiny plastic fragments in oceans, are ingested by marine life, causing physical harm, blocking digestive systems, and potentially transferring harmful chemicals to the food chain.",
+        "answer_bard": "Tiny plastic fragments called microplastics pollute oceans, harming marine life through ingestion, digestive blockage, and potentially transferring harmful chemicals through the food chain."
+    },
+    {
+        "question": "What is a significant source of indoor air pollution, posing health risks to occupants?",
+        "answer_wikipedia": "Radon gas, a naturally occurring radioactive element in soil and rocks, can seep into buildings and accumulate, increasing the risk of lung cancer for occupants.",
+        "answer_bard": "Radon, a naturally occurring radioactive gas in soil and rocks, can seep into buildings and pose a lung cancer risk to occupants if it accumulates."
+    },
+    {
+        "question": "What is a major consequence of soil pollution for agricultural productivity?",
+        "answer_wikipedia": "Chemicals like pesticides and herbicides pollute soil, reducing fertility, disrupting microorganisms, and hindering plant growth, impacting agricultural productivity and food security.",
+        "answer_bard": "Soil pollution by chemicals like pesticides and herbicides reduces fertility, disrupts microorganisms, and hinders plant growth, impacting agricultural productivity and food security."
+    },
+    {
+        "question": "What is a technology used to remediate soil polluted by oil spills?",
+        "answer_wikipedia": "Bioremediation, using microorganisms to break down and consume oil contaminants in polluted soil, is a natural and often effective method for environmental cleanup.",
+        "answer_bard": "Bioremediation uses microorganisms to break down and consume oil contaminants in polluted soil, offering a natural and effective method for environmental cleanup."
+    },
+    {
+        "question": "What international agreement aims to reduce greenhouse gas emissions and combat climate change?",
+        "answer_wikipedia": "The Paris Agreement, adopted by almost 200 countries, sets international goals for reducing greenhouse gas emissions and mitigating the effects of climate change.",
+        "answer_bard": "Nearly 200 countries adopted the Paris Agreement, setting international goals to reduce greenhouse gas emissions and lessen the impacts of climate change."
+    },
+    {
+        "question": "What individual actions can contribute to reducing air pollution in cities?",
+        "answer_wikipedia": "Using public transportation, walking, cycling, or carpooling can help reduce traffic congestion and emissions, improving air quality in urban areas.",
+        "answer_bard": "Using public transport, walking, cycling, or carpooling all help reduce traffic congestion and emissions, leading to cleaner air in cities."
+    }
+]
