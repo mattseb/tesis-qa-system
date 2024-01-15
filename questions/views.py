@@ -26,12 +26,6 @@ def index(request):
 
         model = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device='cpu')
 
-        index_params = {
-            'metric_type': 'L2',
-            'index_type': 'IVF_FLAT', 
-            'params': {'nlist': 16384}
-        }
-
         print(utility.index_building_progress(collection_name))
 
         question_vector = model.encode([question])[0].tolist()
@@ -63,14 +57,14 @@ def index(request):
         topic = 'Contamination'
         #template
         prompt_template=f'''[INST] <<SYS>>
-    You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.
+    You are an assistant that always answer concisely, without introductory sentences and be helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.
     also you are a {topic} expert, answer questions about {topic} as best as you can with this context {context}.
     </SYS>>\n{prompt}[/INST]'''
-        max_tokens=100000
-        temperature=0.5
-        top_p=0.95
+        max_tokens=2500
+        temperature=0.1
+        top_p=0.95  
         repeat_penalty=1.2
-        top_k=150
+        top_k=100
         echo=True
 
         model_name_or_path = "TheBloke/Llama-2-13B-chat-GGML"
@@ -93,12 +87,13 @@ def llama_with_context(model_path_value,topic_value, prompt_value,
                        temperature_value, top_p_value, repeat_penalty_value,
                        top_k_value, echo_value):
     lcpp_llm = None
+
     lcpp_llm = Llama(
         model_path=model_path_value,
-        n_threads=8, # CPU cores
+        n_threads=11, # CPU cores
         n_batch=1024, # Should be between 1 and n_ctx, consider the amount of VRAM in your GPU.
         n_gpu_layers=32, # Change this value based on your model and your GPU VRAM pool.
-        n_ctx=2048
+        n_ctx=3072,
         )
 
     #See the number of layers in GPU

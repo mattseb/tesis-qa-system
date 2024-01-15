@@ -32,8 +32,8 @@ from pymilvus import (
 endPoint = "https://dbpedia.org/sparql"
 sparql = SPARQLWrapper(endPoint)
 # Final paths to save the CSV files
-ruta_del_csv = 'csv\\dominioFinal.csv'
-ruta_del_csv_spliteado = 'csv\\dominioFinalSpliteado.csv'
+ruta_del_csv = 'csv\\dominioFinalTesis.csv'
+ruta_del_csv_spliteado = 'csv\\dominioFinalSpliteadoTesis.csv'
 
 
 # Query endpoint and parse as JSON
@@ -44,8 +44,8 @@ def get_results(query):
     return results
 
 def index(request):
-    ruta_del_csv = 'csv\\dominioFinal.csv'
-    ruta_del_csv_spliteado = 'csv\\dominioFinalSpliteado.csv'
+    ruta_del_csv = 'csv\\dominioFinalTesis.csv'
+    ruta_del_csv_spliteado = 'csv\\dominioFinalSpliteadoTesis.csv'
     # Get all the subdomains when the user clicks Send 
     if request.method == 'POST':
         sections = []
@@ -55,12 +55,19 @@ def index(request):
 
         lista += get_links(selectedValues)
         print("Links relacionados  ", len(lista))
+        tiempo_inicial = time.time()
         with concurrent.futures.ProcessPoolExecutor(max_workers=30) as executor:
             futures = [executor.submit(get_page_sections, item['id_wiki']['value']) for item in lista]
             for num, future in enumerate(concurrent.futures.as_completed(futures)):
                 sections += future.result()
         df = pd.DataFrame(sections, columns=['PageURL', 'Title', 'CreationDate', 'Seccion', 'Subseccion', 'Contenido', 'WikipageID', 'LastModified'])
         df.to_csv(ruta_del_csv, index=False)
+        tiempo_final = time.time()
+
+        # Calcular la duración total
+        duracion_total = tiempo_final - tiempo_inicial
+        print("Se demoro un tiempo de ", duracion_total, " segundos en obtener el contenido de wikipedia")
+
         tiempo_final = results(request, len(lista))
 
         #Subir datos a milvis
@@ -71,7 +78,7 @@ def index(request):
         df = df
 
         connections.connect("default", host="localhost", port="19530")
-        collection_name = 'prueba_final_3'
+        collection_name = 'prueba_final_3_tesis'
         collection = Collection(name=collection_name)
 
         retriever = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device='cuda')
@@ -83,21 +90,17 @@ def index(request):
             meta = row.to_dict()
             to_upsert = {'embedding': emb, 'metadata': meta}
             collection.insert(data=[to_upsert])
-            print(collection.num_entities)
-            print(collection.is_empty)
         fin = time.time()
-        print("Se demoro un tiempo de ", fin - inicio, " segundos")
+        print("Se demoro un tiempo de ", fin - inicio, " segundos en subir los datos a milvus")
         return render (request, 'results.html', {'contador': len(lista),'tiempo_final': tiempo_final})    
     return render(request, 'index.html')
 
 def results(request, contador):
     start = time.time()
-    print(start)
     split_content_haystack(ruta_del_csv)
     end = time.time()
-    print(end)
     final = end - start
-    print("Se demoro un tiempo de ", final)
+    print("Se demoro un tiempo de ", final, " segundos spliteand el contenido con haystack")
     return (final)
 # Obtain the primary search concepts
 def get_search_concepts(request):
@@ -296,7 +299,6 @@ def get_page_sections(page_id, language='en'):
 
     wikipedia.set_lang(language)
     content = page.content.split('\n')
-    print(content)
 
     sections = []
     current_section = None

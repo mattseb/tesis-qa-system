@@ -12,7 +12,7 @@ connections.connect("default", host="localhost", port="19530")
 
 din = 768
 
-collection_name = 'prueba_final_3'
+collection_name = 'prueba_final_3_tesis'
 
 fields=[
     FieldSchema(name='id', dtype=DataType.INT64, is_primary=True, auto_id=True),
