@@ -8,18 +8,21 @@ from pymilvus import (
 
 if __name__ == '__main__':
     inicio = time.time()
-    ruta_del_csv = 'csv\\dominioFinalSpliteado6.csv'
+    ruta_del_csv = 'csv\\dominioFinalSpliteadoTesis.csv'
 
     df = pd.read_csv(ruta_del_csv)
     df = df
 
     connections.connect("default", host="localhost", port="19530")
-    collection_name = 'prueba_final_3'
+    collection_name = 'prueba_final_3_tesis'
     collection = Collection(name=collection_name)
 
-    retriever = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device='cuda')
+    # retriever = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device='cuda')
+    retriever = SentenceTransformer("sentence-transformers/all-mpnet-base-v2")
     collection.load()
 
+    df.fillna("", axis=1, inplace=True)
+    
     for index, row in df.iterrows():
         print('==== ITER ========', index)
         emb = retriever.encode(row["split"]).tolist()

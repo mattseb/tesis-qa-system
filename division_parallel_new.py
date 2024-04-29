@@ -60,7 +60,7 @@ def crear_txt(contenido, i):
     try:
         # Crear el archivo TXT y escribir el contenido
         # nombre_archivo = "haystack-division/ContenidoCelda" + str(i) + ".txt"
-        nombre_archivo = "C:\\Users\\mateo\\Documents\\Universidad\\Tesis\\tesis-qa-system\\haystack-division\\ContenidoCelda" + str(i) + ".txt"
+        nombre_archivo = ".\\haystack-division\\ContenidoCelda" + str(i) + ".txt"
         with open(nombre_archivo, 'w', encoding='UTF-8') as archivo:
             archivo.write(contenido)
         print(f"El archivo {nombre_archivo} se ha creado y el contenido se ha almacenado correctamente.")

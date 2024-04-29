@@ -7,10 +7,6 @@ from pymilvus import (
 
 if __name__ == '__main__':
     connections.connect("default", host="localhost", port="19530")
-    collection_name = 'prueba_final_2'
-    collection = Collection(name=collection_name)
+    collection_name = 'prueba_final_3_tesis'
 
-    retriever = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device='cuda')
-    collection.load()
-    batch_size = 64
-    utility.drop_collection("prueba_final_3")
+    utility.drop_collection(collection_name)

@@ -27,13 +27,13 @@ from pymilvus import (
     connections,
     Collection,
 )
-## Global variables
+# Global variables
 # Endpoint to make the query
 endPoint = "https://dbpedia.org/sparql"
 sparql = SPARQLWrapper(endPoint)
 # Final paths to save the CSV files
-ruta_del_csv = 'csv\\dominioFinalTesis.csv'
-ruta_del_csv_spliteado = 'csv\\dominioFinalSpliteadoTesis.csv'
+ruta_del_csv = '..\\csv\\dominioFinalTesis.csv'
+ruta_del_csv_spliteado = '..\\csv\\dominioFinalSpliteadoTesis.csv'
 
 
 # Query endpoint and parse as JSON
@@ -43,10 +43,47 @@ def get_results(query):
     results = sparql.query().convert()
     return results
 
+def create_collection():
+    from pymilvus import (
+        connections,
+        FieldSchema,
+        CollectionSchema,
+        DataType,
+        Collection,
+    )
+
+    # Especifica la ruta del archivo CSV
+    connections.connect("default", host="localhost", port="19530")
+
+    din = 768
+
+    collection_name = 'prueba_final_3_tesis'
+
+    fields=[
+        FieldSchema(name='id', dtype=DataType.INT64, is_primary=True, auto_id=True),
+        FieldSchema(name='embedding', dtype=DataType.FLOAT_VECTOR, dim=din),
+        FieldSchema(name='metadata', dtype=DataType.JSON)
+    ]
+            
+    schema = CollectionSchema(fields)
+    collection = Collection(name=collection_name, schema=schema)
+
+    index_params = {
+    "metric_type":"COSINE",
+    "index_type":"FLAT"
+    }
+
+    collection = Collection(collection_name)
+    collection.create_index(
+        field_name="embedding", 
+        index_params=index_params
+    )
+
 def index(request):
-    ruta_del_csv = 'csv\\dominioFinalTesis.csv'
+    #ruta_del_csv = 'csv\\dominioFinalTesis.csv'
+    ruta_del_csv = 'csv\\dominioFinalSpliteado.csv'
     ruta_del_csv_spliteado = 'csv\\dominioFinalSpliteadoTesis.csv'
-    # Get all the subdomains when the user clicks Send 
+    # Get all the subdomains when the user clicks Send
     if request.method == 'POST':
         sections = []
         selectedValues = request.POST.get('valores_seleccionados')
@@ -57,33 +94,56 @@ def index(request):
         print("Links relacionados  ", len(lista))
         tiempo_inicial = time.time()
         with concurrent.futures.ProcessPoolExecutor(max_workers=30) as executor:
-            futures = [executor.submit(get_page_sections, item['id_wiki']['value']) for item in lista]
+            futures = [executor.submit(
+                get_page_sections, item['id_wiki']['value']) for item in lista]
             for num, future in enumerate(concurrent.futures.as_completed(futures)):
                 sections += future.result()
-        df = pd.DataFrame(sections, columns=['PageURL', 'Title', 'CreationDate', 'Seccion', 'Subseccion', 'Contenido', 'WikipageID', 'LastModified'])
+        df = pd.DataFrame(sections, columns=[
+                          'PageURL', 'Title', 'CreationDate', 'Seccion', 'Subseccion', 'Contenido', 'WikipageID', 'LastModified'])
         df.to_csv(ruta_del_csv, index=False)
         tiempo_final = time.time()
 
         # Calcular la duración total
         duracion_total = tiempo_final - tiempo_inicial
-        print("Se demoro un tiempo de ", duracion_total, " segundos en obtener el contenido de wikipedia")
+        print("Se demoro un tiempo de ", duracion_total,
+              " segundos en obtener el contenido de wikipedia")
 
         tiempo_final = results(request, len(lista))
 
-        #Subir datos a milvis
+        # Subir datos a milvis
         inicio = time.time()
-        ruta_del_csv = 'csv\\dominioFinalSpliteado.csv'
+        ruta_del_csv = '.\\csv\\dominioFinalSpliteado.csv'
 
-        df = pd.read_csv(ruta_del_csv)
+        df = pd.read_csv(ruta_del_csv_spliteado)
         df = df
 
         connections.connect("default", host="localhost", port="19530")
         collection_name = 'prueba_final_3_tesis'
-        collection = Collection(name=collection_name)
 
-        retriever = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device='cuda')
+        # Verificar si la colección existe
+        try:
+            collection = Collection(collection_name)
+        except Exception as e:
+            create_collection()
+
+        
+        collection = Collection(name=collection_name)
+        
+        index_params = {
+            "metric_type":"COSINE",
+            "index_type":"FLAT"
+        }
+        collection.create_index(
+            field_name="embedding", 
+            index_params=index_params
+        )
+        print([index.params for index in collection.indexes])
+        #retriever = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device='cuda')
+        retriever = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device='cpu')
         collection.load()
 
+        df.fillna("", axis=1, inplace=True)
+        
         for index, row in df.iterrows():
             print('==== ITER ========', index)
             emb = retriever.encode(row["split"]).tolist()
@@ -91,18 +151,23 @@ def index(request):
             to_upsert = {'embedding': emb, 'metadata': meta}
             collection.insert(data=[to_upsert])
         fin = time.time()
-        print("Se demoro un tiempo de ", fin - inicio, " segundos en subir los datos a milvus")
-        return render (request, 'results.html', {'contador': len(lista),'tiempo_final': tiempo_final})    
+        print("Se demoro un tiempo de ", fin - inicio,
+              " segundos en subir los datos a milvus")
+        return render(request, 'results.html', {'contador': len(lista), 'tiempo_final': tiempo_final})
     return render(request, 'index.html')
+
 
 def results(request, contador):
     start = time.time()
     split_content_haystack(ruta_del_csv)
     end = time.time()
     final = end - start
-    print("Se demoro un tiempo de ", final, " segundos spliteand el contenido con haystack")
+    print("Se demoro un tiempo de ", final,
+          " segundos spliteand el contenido con haystack")
     return (final)
 # Obtain the primary search concepts
+
+
 def get_search_concepts(request):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         concepto = request.GET.get('term')
@@ -129,7 +194,8 @@ def get_search_concepts(request):
             elif tipo == '1':
                 filters = ""
                 for filter_item in data:
-                    filters += f"FILTER(!CONTAINS(str(?label), '{filter_item.strip()}'))\n"
+                    filters += f"FILTER(!CONTAINS(str(?label), '{
+                        filter_item.strip()}'))\n"
                 query = """
                     SELECT DISTINCT ?r
                     WHERE
@@ -154,12 +220,14 @@ def get_search_concepts(request):
     else:
         return JsonResponse({"error": "Invalid request. Only AJAX requests are allowed."}, status=400)
 
+
 def get_subdomains(request):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         concepto = request.GET.get('selectedValue')
         nivel = request.GET.get('level')
         resultados = []
-        nivel = request.GET.get('level') if request.GET.get('level') != None else '0' 
+        nivel = request.GET.get('level') if request.GET.get(
+            'level') != None else '0'
         if nivel == '0':
             dominiosSeleccionados = concepto.split("Category:", 1)[1]
             resultado = get_reource_query(dominiosSeleccionados, nivel)
@@ -183,6 +251,7 @@ def get_subdomains(request):
             return JsonResponse(json_data, safe=False)
     return JsonResponse({'error': 'No se pudo procesar la solicitud'})
 
+
 def get_reource_query(resource, level):
     resource = re.sub(r"([,()/.'])", r'\\\1', resource)
 
@@ -193,7 +262,8 @@ def get_reource_query(resource, level):
 
         filters = ""
         for filter_item in data:
-            filters += f"FILTER(!CONTAINS(str(?label), '{filter_item.strip()}'))\n"
+            filters += f"FILTER(!CONTAINS(str(?label), '{
+                filter_item.strip()}'))\n"
     query = """
     PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -209,10 +279,11 @@ def get_reource_query(resource, level):
         }
     
     }    
-    """ %(resource,str(level), filters)
+    """ % (resource, str(level), filters)
 
     resultados = get_results(query)
     return resultados["results"]["bindings"]
+
 
 def modify_configurations(request):
     with open("global_config/filters.txt", 'r') as file:
@@ -221,6 +292,7 @@ def modify_configurations(request):
     data_list = data.split(';')
     data_list.pop()
     return render(request, 'configurations.html', {'data_list': data_list})
+
 
 def add_filter(request, filter_value, filter_action):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -241,6 +313,8 @@ def add_filter(request, filter_value, filter_action):
     return JsonResponse({'error': 'Error al agregar el filtro.'}, status=400)
 
 # Get the links of all the selected values
+
+
 def get_links(resources):
     batch_size = 50  # Tamaño del lote
     results = []  # Almacenar los resultados de todos los lotes
@@ -248,8 +322,9 @@ def get_links(resources):
     for i in range(0, len(resources), batch_size):
         batch = resources[i:i + batch_size]  # Obtener un lote de recursos
         batch = [quote(resource) for resource in batch]  # Citar los recursos
-        
-        values_clause = " ".join(["(dbc:%s)" % resource.replace("/", r"\/") if "/" in resource else "(dbc:%s)" % resource for resource in batch])
+
+        values_clause = " ".join(["(dbc:%s)" % resource.replace(
+            "/", r"\/") if "/" in resource else "(dbc:%s)" % resource for resource in batch])
 
         query = """
         PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
@@ -269,11 +344,12 @@ def get_links(resources):
 
         # Llamar a la función get_results para obtener los resultados del lote actual
         resultados = get_results(query)
-        
+
         # Agregar los resultados del lote actual a la lista de resultados
         results.extend(resultados["results"]["bindings"])
 
     return results
+
 
 def get_page_sections(page_id, language='en'):
     try:
@@ -284,7 +360,8 @@ def get_page_sections(page_id, language='en'):
         page_id = wikipageid
 
         # Fetch the revision history using the Wikipedia API
-        url = f"https://en.wikipedia.org/w/api.php?action=query&prop=revisions&rvprop=timestamp&format=json&pageids={page_id}"
+        url = f"https://en.wikipedia.org/w/api.php?action=query&prop=revisions&rvprop=timestamp&format=json&pageids={
+            page_id}"
         response = requests.get(url)
         data = json.loads(response.text)
 
@@ -293,7 +370,7 @@ def get_page_sections(page_id, language='en'):
         creation_rev = data['query']['pages'][str(page_id)]['revisions'][-1]
         creation_date = creation_rev['timestamp']
         last_modified = latest_rev['timestamp']
-    except:
+    except Exception as e:
         sections = []
         return sections
 
@@ -306,7 +383,7 @@ def get_page_sections(page_id, language='en'):
     exclude_sections = [" See also ", " References ", " External links "]
     filter_content = [element for element in content if element != '']
     for line in filter_content:
-        if(line != ''):
+        if line != '':
             line = line.strip()
         else:
             continue
@@ -320,14 +397,26 @@ def get_page_sections(page_id, language='en'):
             if current_section not in exclude_sections:
                 if sections:
                     if sections[-1][4] == sub_section and sections[-1][3] == current_section:
-                        sections[-1] = (page_url, title, creation_date, sections[-1][3], sections[-1][4], sections[-1][5] + " " + line, wikipageid, last_modified)
+                        sections[-1] = (page_url, title, creation_date, sections[-1][3], sections[-1]
+                                        [4], sections[-1][5] + " " + line, wikipageid, last_modified)
                     else:
-                        sections.append((page_url, title, creation_date, current_section, sub_section, line, wikipageid, last_modified))
+                        sections.append((page_url, title, creation_date, current_section,
+                                        sub_section, line, wikipageid, last_modified))
                 else:
-                    sections.append((page_url, title, creation_date, current_section, sub_section, line, wikipageid, last_modified))
-            elif current_section == None:
-                sections.append((page_url, title, creation_date, None, None, line, wikipageid, last_modified))            
+                    sections.append((
+                        page_url,
+                        title,
+                        creation_date,
+                        current_section,
+                        sub_section, line,
+                        wikipageid,
+                        last_modified
+                    ))
+            elif current_section is None:
+                sections.append((page_url, title, creation_date,
+                                None, None, line, wikipageid, last_modified))
     return sections
+
 
 def create_preprocessor_haystack(split_by_user, split_length_user):
     try:
@@ -336,8 +425,8 @@ def create_preprocessor_haystack(split_by_user, split_length_user):
                 clean_empty_lines=True,
                 clean_whitespace=True,
                 clean_header_footer=False,
-                split_by= split_by_user,
-                split_length = split_length_user,
+                split_by=split_by_user,
+                split_length=split_length_user,
                 split_respect_sentence_boundary=False
             )
         else:
@@ -345,21 +434,24 @@ def create_preprocessor_haystack(split_by_user, split_length_user):
                 clean_empty_lines=True,
                 clean_whitespace=True,
                 clean_header_footer=False,
-                split_by= split_by_user,
-                split_length = split_length_user,
+                split_by=split_by_user,
+                split_length=split_length_user,
                 split_respect_sentence_boundary=True
             )
         return preprocessor
     except Exception as e:
         print(f"An error occurred in the preprocessor: {e}")
 
+
 def lenght_token(text, llm):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
     try:
-        tokenizer = AutoTokenizer.from_pretrained(llm, return_tensors='pt')  # Indicar que se usará PyTorch
+        tokenizer = AutoTokenizer.from_pretrained(
+            llm, return_tensors='pt')  # Indicar que se usará PyTorch
         # tokenizer.model_max_length = 512
-        tokens = tokenizer.encode(text, return_tensors='pt').to(device)  # Mover los tokens a la GPU
+        tokens = tokenizer.encode(text, return_tensors='pt').to(
+            device)  # Mover los tokens a la GPU
         return tokens.size(1)  # Obtener la longitud de los tokens
     except Exception as e:
         print(f"An error occurred in the lengthToken: {e}")
@@ -373,30 +465,33 @@ def leer_csv(file_path):
     except Exception as e:
         print(f"Error al leer el CSV: {e}")
         return None
-    
+
 
 def crear_txt(contenido, i):
     try:
         # Crear el archivo TXT y escribir el contenido
-        nombre_archivo = "C:\\Users\\mateo\\Documents\\Universidad\\Tesis\\tesis-qa-system\\haystack-division\\ContenidoCelda" + str(i) + ".txt"
+        nombre_archivo = ".\\haystack-division\\ContenidoCelda" + str(i) + ".txt"
         with open(nombre_archivo, 'w', encoding='UTF-8') as archivo:
             archivo.write(contenido)
-        print(f"El archivo {nombre_archivo} se ha creado y el contenido se ha almacenado correctamente.")
+        print(f"El archivo {
+              nombre_archivo} se ha creado y el contenido se ha almacenado correctamente.")
         return nombre_archivo
     except Exception as e:
         print(f"Error al crear el archivo TXT: {e}")
         return None
-    
+
 def procesar_documento(file_path):
     try:
         # Convertir el archivo a documentos
-        converter = TextConverter(remove_numeric_tables=True, valid_languages=["en"])
+        converter = TextConverter(
+            remove_numeric_tables=True, valid_languages=["en"])
         doc_txt = converter.convert(file_path=file_path, meta=None)[0]
         return doc_txt
     except Exception as e:
         print(f"Error al procesar el documento: {e}")
         return None
-    
+
+
 def procesar_contenido(contenido):
     preprocessor = create_preprocessor_haystack("sentence", 6)
     docs_default = preprocessor.process([contenido])
@@ -420,10 +515,10 @@ def procesar_fila(fila):
 
     print(f"----- Línea {fila['id']} -----")
 
-    num_tokens = lenght_token(fila["Contenido"],modelo)
+    num_tokens = lenght_token(fila["Contenido"], modelo)
     max_tokens = get_max_tokens_llm(modelo)
 
-    if num_tokens <= max_tokens:  
+    if num_tokens <= max_tokens:
         print('===================INICIO=======================')
         print(f"Num tokens columns: {num_tokens} < {max_tokens}")
         print('===================FIN=======================')
@@ -440,7 +535,7 @@ def procesar_fila(fila):
             'split': fila['Contenido'],
             'split_id': 0,
             'tokens': num_tokens
-            })
+        })
     else:
         print('------------------------ DIVISION ------------------------')
 
@@ -451,10 +546,10 @@ def procesar_fila(fila):
         doc_txt = procesar_documento(nombre_archivo)
         if doc_txt is None:
             return None
-        
+
         docs_default = procesar_contenido(doc_txt)
 
-        os.remove("C:\\Users\\mateo\\Documents\\Universidad\\Tesis\\tesis-qa-system\\haystack-division\\ContenidoCelda" + str(fila["id"]) + ".txt")
+        os.remove(".\\haystack-division\\ContenidoCelda" + str(fila["id"]) + ".txt")
 
         for element in docs_default:
             document_dict = element.to_dict()
@@ -462,7 +557,7 @@ def procesar_fila(fila):
             for key, value in document_dict.items():
                 if key == 'content':
                     fragments_list.append(value)
-                    tokens_list.append(lenght_token(value,modelo))
+                    tokens_list.append(lenght_token(value, modelo))
                 elif key == 'meta':
                     for key_meta, value_meta in value.items():
                         split_id_list.append(value_meta)
@@ -483,7 +578,8 @@ def procesar_fila(fila):
                 'tokens': tokens_list[num]
             })
 
-    return result   
+    return result
+
 
 def split_content_haystack(file_path):
     df = leer_csv(file_path)
@@ -492,9 +588,8 @@ def split_content_haystack(file_path):
         return
 
     df.insert(0, 'id', range(1, len(df) + 1))
-    
-    new_df = pd.DataFrame(columns=df.columns.tolist() + ['split', 'split_id', 'tokens'])
-
+    new_df = pd.DataFrame(columns=df.columns.tolist() +
+                          ['split', 'split_id', 'tokens'])
     tasks = []
 
     with ProcessPoolExecutor(max_workers=25) as executor:
@@ -508,7 +603,8 @@ def split_content_haystack(file_path):
 
     for res in result:
         for item in res:
-            new_df.loc[len(new_df)] = item  # Agregar cada elemento al nuevo DataFrame
+            # Agregar cada elemento al nuevo DataFrame
+            new_df.loc[len(new_df)] = item
 
     new_df.to_csv(ruta_del_csv_spliteado, index=False)
     print("DataFrame se ha guardado en 'dominioFinalSpliteado.csv'")
